@@ -18,7 +18,7 @@
 Windows Event Log как вспомогательный источник диагностики, но не как источник точного foreground dwell. Использовать нативные документированные GetForegroundWindow/GetLastInputInfo и lock/session change. Native macOS не реализуется в v1. Никаких глобальных key hooks/clipboard. OCR: Windows Graphics Capture и platform OCR — проверить системные permission/SDK и исключения secure surfaces на реальных устройствах; не обходить permission. Ссылки: [Windows foreground](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getforegroundwindow), [Windows idle](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getlastinputinfo).
 
 ## ADR decisions
-1. Local-first single-owner, opt-in; сервер только private LAN/VPN TLS. Не облачный аналитический сервис.
+1. Local-first single-owner, opt-in; встроенный сервер exact loopback HTTP by default with strict Host/Origin/auth, optional private LAN/VPN HTTPS only. Не облачный аналитический сервис.
 2. In-process Python pywin32 collector + pystray, optional ActivityWatch import, не fork. Нативный fallback гарантирует политику до persistence.
 3. SQLite authoritative WAL+FTS5+float32 BLOB and NumPy exact cosine + edge tables + durable jobs. Supersedes PostgreSQL/pgvector decision (ADR-011).
 4. Signals != facts: explicit granularity, playback vs reading, temporal scores, user overrides; every derived claim evidence, reject unsupported.
