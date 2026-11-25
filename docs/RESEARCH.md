@@ -33,3 +33,6 @@ Windows Event Log как вспомогательный источник диа�
 
 ## Native Windows packaging (decision 24.11.2026)
 [ADR-011](adr/011-native-windows-python.md) is authoritative: PyInstaller onedir + Inno Setup, FastAPI/Uvicorn embedded, Python collector, SQLite WAL/FTS5/NumPy, asyncio durable jobs. References and trade-offs in ADR. No Docker/WSL/PostgreSQL/Rust runtime; browser extension + local LLM optional separate applications. Test frozen binary, privacy and upgrade on clean Windows VM; exact vectors benchmark before adding dependency.
+
+## v1.3: Personal Intelligence Engine
+See [INTELLIGENCE.md](INTELLIGENCE.md) for adopted product design: deterministic relevance/goal/novelty/utility/trust/freshness rank, MMR diversification, explicit feedback only, confirmed long-term snapshots, local-only first value, opt-in fixed RSS/GitHub/changelog endpoint monitoring, no personal context egress. Algorithm weights and thresholds are initial hypotheses to evaluate (PC-035), not measured claims. No new infrastructure or automatic web browsing.

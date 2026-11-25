@@ -16,3 +16,6 @@
 - [PyInstaller packaging](https://pyinstaller.org/en/latest/operating-mode.html), [Inno Setup](https://jrsoftware.org/isinfo.php)
 - [pystray](https://pystray.readthedocs.io/en/latest/usage.html), [Windows API foreground](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getforegroundwindow)
 - [Uvicorn settings](https://www.uvicorn.org/settings/), [NumPy dot](https://numpy.org/doc/stable/reference/generated/numpy.dot.html)
+
+## v1.3 intelligence extension (25.11.2026)
+[INTELLIGENCE.md](../INTELLIGENCE.md) adds local-first ranking, confirmed memory/goals, feedback, Resource Governor and opt-in public research. Architecture remains unchanged: same executable, SQLite tables/FTS5/BLOB vectors, durable asyncio scheduler and bundled UI. External public endpoint broker is the only new outbound capability, OFF by default, separate explicit subscription approval, no private context or derived queries. Do not add separate recommender/research services. No notifications; technical eval PC-035 before release PC-025.

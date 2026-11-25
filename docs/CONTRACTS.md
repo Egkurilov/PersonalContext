@@ -1,5 +1,7 @@
 # Контракты данных, алгоритмы и проверка
 
+**v1.3:** дополнительные нормативные схемы memory/goals/candidates/recommendations/feedback/public research, API, scoring, governance и eval находятся в [INTELLIGENCE.md](INTELLIGENCE.md). Все новые записи используют тот же SQLite single writer, policy/expiry/tombstones, FTS5/NumPy и durable jobs. Обычные derived records не переживают evidence; подтверждённые пользователем snapshots регулируются явно выбранным scope/retention и каскадным privacy delete/revoke. Внешний fetch только выделенным opt-in public research broker, не ассистентом или ingestion.
+
 ## Event envelope v1
 JSON, versioned JSON Schema + OpenAPI; UUIDv7 или UUIDv4, ISO UTC timestamp, original timezone IANA, duration ms integer/null; server clock separately. Example (synthetic):
 ```json
@@ -43,3 +45,6 @@ Evidence is not endorsement. Use per-topic weighted event contributions:
 
 ## Quality / test design
 Unit: schema, URL/token sanitization, policy precedence (deny wins), math, date/DST, event union, graph stable ids/overrides. Integration: real on-disk SQLite WAL+FTS5/NumPy, transactional outbox, dedup, crash/lease recovery, migration, purge across derived/index/cache, restore tombstones. Contract: API/OpenAPI+JSON schema fixtures, source version compatibility. UI E2E (Playwright): onboarding, consent, source states, real persisted events→timeline→topic detail→correction→search→MCP/Obsidian→delete→no results; mobile 360px, keyboard/axe. Platform: Windows app switch, lock/sleep, Chrome/Edge focus + incognito, optional Chrome macOS browser-only smoke, mobile web viewport, no Apple-specific collector prerequisite. Local model eval: ≥200 labeled synthetic/public licensed RU/EN items (≥50 Russian), split train/tune vs holdout, reproducible seed and version; macro F1≥0.75 topic labels, retrieval precision@5≥0.8, citation validity 100%, no-evidence abstention 100% on test prompts, zero leakage on sensitive/adversarial fixtures. Manual review false interest (work vs actual preference), no inference of sensitive traits. Prompt injection fixture 'ignore prior instructions' treated as content, not action. Performance: synthetic 900k events/100k chunks/1000 topics benchmark and 72h offline simulation; publish hardware, p50/p95, memory and error counts without user data. Test acceptance failures block release or documented OS capability fallback only; no mock success. 
+
+## Расширение v1.3
+PC-026–035 реализуют INTELLIGENCE.md. Не дублировать job scheduler/ранжировщик/внешний клиент. Policy and evidence recheck перед публикацией, выдачей и commit; все новые tables/indices/cache входят в purge и backup/restore. Recommendation eval и pilot metrics отделены от обычной LLM retrieval eval. Не логировать outbound private context, не отправлять его во внешнюю сеть.
