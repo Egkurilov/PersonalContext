@@ -51,6 +51,9 @@ jobs:
 
       - if: runner.os == 'Windows'
         shell: pwsh
-        run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Qp installer/PersonalContext.iss'
+        run: |
+          $compiler = & ./scripts/ensure_inno.ps1
+          & $compiler /Qp installer/PersonalContext.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - if: runner.os == 'Windows'
         run: uv run python scripts/smoke_installer.py

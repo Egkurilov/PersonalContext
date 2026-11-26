@@ -9,11 +9,7 @@ try {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & .venv/Scripts/python scripts/smoke_frozen.py
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    $compiler = Get-Command ISCC.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1
-    if (-not $compiler) {
-        $compiler = @("$env:LOCALAPPDATA/Programs/Inno Setup 6/ISCC.exe", "${env:ProgramFiles(x86)}/Inno Setup 6/ISCC.exe") | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
-    }
-    if (-not $compiler) { throw 'Inno Setup 6 compiler ISCC.exe not found' }
+    $compiler = & "$PSScriptRoot/ensure_inno.ps1"
     & $compiler /Qp installer/PersonalContext.iss
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & .venv/Scripts/python scripts/smoke_installer.py

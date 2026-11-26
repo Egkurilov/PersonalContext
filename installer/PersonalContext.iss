@@ -1,4 +1,7 @@
 #define AppVersion "0.1.0"
+#if Ver != 0x06070400
+  #error Build requires Inno Setup 6.7.4.
+#endif
 
 [Setup]
 AppId={{13A96698-E7A8-4BA4-AD40-012D57D437C1}
