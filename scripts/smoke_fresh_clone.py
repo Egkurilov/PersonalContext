@@ -50,7 +50,6 @@ def main():
         environment["UV_CACHE_DIR"] = uv_cache
         environment["UV_OFFLINE"] = "1"
         environment["NPM_CONFIG_CACHE"] = npm_cache
-        environment["NPM_CONFIG_OFFLINE"] = "true"
         environment["NPM_CONFIG_AUDIT"] = "false"
         for name in ("PYTHONPATH", "PYTHONHOME", "VIRTUAL_ENV", "NODE_PATH"):
             environment.pop(name, None)
