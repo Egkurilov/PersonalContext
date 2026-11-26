@@ -2,7 +2,9 @@ $ErrorActionPreference = 'Stop'
 Push-Location (Join-Path $PSScriptRoot '..')
 try {
     Write-Host "PersonalContext: preparing Python dependencies"
-    & "$PSScriptRoot/uv.ps1" sync --locked
+    & "$PSScriptRoot/uv.ps1" sync --locked --python (Get-Content .python-version -Raw).Trim()
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & .venv/Scripts/python scripts/check_python.py
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     Write-Host "PersonalContext: checking Git hooks"
     $hooksPath = git config --get core.hooksPath

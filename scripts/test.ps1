@@ -1,7 +1,9 @@
 $ErrorActionPreference = 'Stop'
 Push-Location (Join-Path $PSScriptRoot '..')
 try {
-    & "$PSScriptRoot/uv.ps1" sync --locked
+    & "$PSScriptRoot/uv.ps1" sync --locked --python (Get-Content .python-version -Raw).Trim()
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & .venv/Scripts/python scripts/check_python.py
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & .venv/Scripts/ruff check src tests scripts/*.py
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
