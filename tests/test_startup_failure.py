@@ -12,6 +12,32 @@ from urllib.request import urlopen
 
 @unittest.skipUnless(sys.platform == "win32", "Windows tray entrypoint required")
 class StartupFailureTests(unittest.TestCase):
+    def test_unavailable_data_directory_shows_diagnostic_without_opening_port(self):
+        from personalcontext.__main__ import main
+
+        with tempfile.TemporaryDirectory() as directory:
+            invalid_root = Path(directory) / "not-a-directory"
+            invalid_root.write_text("synthetic", encoding="utf-8")
+            with (patch.dict(os.environ, {"LOCALAPPDATA": str(invalid_root)}),
+                  patch("sys.argv", ["personalcontext"]), patch("win32api.MessageBox") as message,
+                  patch("personalcontext.__main__.socket.socket") as listener):
+                self.assertEqual(main(), 1)
+            listener.assert_not_called()
+            message.assert_called_once()
+            self.assertNotIn(str(invalid_root), str(message.call_args))
+            invalid_root.unlink()
+            invalid_root.mkdir()
+            (Path(directory) / "frontend/dist/assets").mkdir(parents=True)
+            with (patch.dict(os.environ, {"LOCALAPPDATA": str(invalid_root)}),
+                  patch("sys.argv", ["personalcontext"]), patch("sys._MEIPASS", directory, create=True),
+                  patch("personalcontext.__main__.pystray.Icon") as icon):
+                def check_ready(**_kwargs):
+                    with urlopen("http://127.0.0.1:17890/readyz", timeout=2) as response:
+                        self.assertEqual(response.read(), b'{"status":"ready"}')
+
+                icon.return_value.run.side_effect = check_ready
+                self.assertEqual(main(), 0)
+
     def test_demo_shutdown_targets_separate_directory(self):
         from personalcontext.__main__ import main
 

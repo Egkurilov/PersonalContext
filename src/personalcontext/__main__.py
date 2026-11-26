@@ -29,7 +29,11 @@ def main() -> int:
     data_dir = Path(os.environ["LOCALAPPDATA"]) / "PersonalContext" / ("demo" if demo else "data")
     if "--shutdown" in sys.argv[1:]:
         return request_shutdown(data_dir)
-    data_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        data_dir.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        win32api.MessageBox(0, "Не удалось открыть каталог данных PersonalContext.", "PersonalContext", win32con.MB_ICONERROR)
+        return 1
     name = mutex_name(data_dir)
     mutex = win32event.CreateMutex(None, False, name)  # type: ignore[arg-type]  # Default security attributes are supported by pywin32.
     if win32api.GetLastError() == winerror.ERROR_ALREADY_EXISTS:
