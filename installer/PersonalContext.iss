@@ -24,6 +24,8 @@ Source: "..\dist\PersonalContext\*"; DestDir: "{app}"; Flags: ignoreversion recu
 Name: "{autoprograms}\PersonalContext"; Filename: "{app}\PersonalContext.exe"
 
 [Code]
+#include "VersionGuard.iss"
+
 function StopInstalledApp: Boolean;
 var
   ResultCode: Integer;
@@ -38,7 +40,9 @@ end;
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   Result := '';
-  if not StopInstalledApp then
+  if not InstalledVersionAllowed then
+    Result := 'Установлена более новая или неизвестная версия PersonalContext. Установка отменена.'
+  else if not StopInstalledApp then
     Result := 'Не удалось остановить PersonalContext. Закройте приложение и повторите установку.';
 end;
 

@@ -7,6 +7,8 @@ import winreg
 from pathlib import Path
 from urllib.request import urlopen
 
+from check_installer_downgrade import verify_downgrade_guard
+
 UNINSTALL_KEY = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\{13A96698-E7A8-4BA4-AD40-012D57D437C1}_is1"
 
 
@@ -22,6 +24,7 @@ def main():
         command = [str(setup), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/NOICONS", f"/DIR={install_dir}"]
         try:
             subprocess.run(command, check=True, timeout=120)
+            verify_downgrade_guard(command, UNINSTALL_KEY, install_dir)
             subprocess.run([sys.executable, "scripts/smoke_frozen.py", str(install_dir / "PersonalContext.exe")], check=True, timeout=90)
             env = os.environ.copy()
             env["LOCALAPPDATA"] = str(Path(directory) / "runtime")
