@@ -25,8 +25,9 @@ def main() -> int:
         sys.argv.pop(1)
         restore_main()
         return 0
-    data_dir = Path(os.environ["LOCALAPPDATA"]) / "PersonalContext" / "data"
-    if len(sys.argv) > 1 and sys.argv[1] == "--shutdown":
+    demo = "--demo" in sys.argv[1:]
+    data_dir = Path(os.environ["LOCALAPPDATA"]) / "PersonalContext" / ("demo" if demo else "data")
+    if "--shutdown" in sys.argv[1:]:
         return request_shutdown(data_dir)
     data_dir.mkdir(parents=True, exist_ok=True)
     name = mutex_name(data_dir)
@@ -42,7 +43,7 @@ def main() -> int:
         listener.listen(128)
         root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[2]))
         web_root = root / "frontend" / "dist"
-        app = create_app(data_dir / "context.db", web_root)
+        app = create_app(data_dir / "context.db", web_root, demo=demo)
         server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=17890, workers=1, log_level="warning"))
         thread = threading.Thread(target=server.run, kwargs={"sockets": [listener]}, daemon=True)
         thread.start()

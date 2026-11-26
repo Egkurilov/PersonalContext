@@ -7,14 +7,17 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from personalcontext.contracts.health import HealthResponse, ReadinessResponse
+from personalcontext.demo.seed import DemoResponse, seed_demo
 from personalcontext.jobs.scheduler import Scheduler
 from personalcontext.storage.initialize import initialize_database
 
 
-def create_app(database_path: Path, web_root: Path | None = None) -> FastAPI:
+def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool = False) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         initialize_database(database_path)
+        if demo:
+            app.state.demo_response = seed_demo(database_path)
         scheduler = Scheduler(database_path, {})
         try:
             await scheduler.start()
@@ -51,6 +54,11 @@ def create_app(database_path: Path, web_root: Path | None = None) -> FastAPI:
         if not getattr(app.state, "ready", False) or app.state.scheduler.task.done():
             return JSONResponse(ReadinessResponse(status="unavailable").model_dump(), status_code=503)
         return ReadinessResponse(status="ready")
+
+    if demo:
+        @app.get("/api/v1/demo")
+        async def demo_data() -> DemoResponse:
+            return DemoResponse.model_validate(app.state.demo_response)
 
     if web_root is not None:
         app.mount("/assets", StaticFiles(directory=web_root / "assets"), name="assets")

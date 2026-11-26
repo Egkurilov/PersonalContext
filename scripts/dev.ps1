@@ -19,6 +19,6 @@ try {
     npm run build --prefix frontend
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     Write-Host "PersonalContext: starting application"
-    & .venv/Scripts/python -m personalcontext
+    & .venv/Scripts/python -m personalcontext --demo
     exit $LASTEXITCODE
 } finally { Pop-Location }

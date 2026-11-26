@@ -1,16 +1,15 @@
 import os
 import shutil
 import socket
-import sqlite3
 import subprocess
 import tempfile
 import threading
 import time
-from contextlib import closing
 from pathlib import Path
 from urllib.request import urlopen
 
 from setup_diagnostics import observe_setup
+from verify_demo import verify_demo
 
 
 def main():
@@ -66,22 +65,14 @@ def main():
                 try:
                     with urlopen("http://127.0.0.1:17890/readyz", timeout=1) as response:
                         ready = response.read() == b'{"status":"ready"}'
-                    if ready and (root / "localdata/PersonalContext/data/context.db").is_file():
+                    if ready and (root / "localdata/PersonalContext/demo/context.db").is_file():
                         break
                 except OSError:
                     time.sleep(0.25)
             else:
                 observer.join(timeout=2)
                 raise RuntimeError(f"Fresh clone failed; stage={state['stage']}; reason={state['reason']}; exit={process.poll()}")
-            database = root / "localdata/PersonalContext/data/context.db"
-            with closing(sqlite3.connect(database)) as connection:
-                if connection.execute("SELECT count(*) FROM jobs").fetchone()[0] != 0:
-                    raise RuntimeError("Fresh database contains unexpected jobs")
-                events_table = connection.execute(
-                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='events'"
-                ).fetchone()
-                if events_table and connection.execute("SELECT count(*) FROM events").fetchone()[0] != 0:
-                    raise RuntimeError("Fresh database contains unexpected events")
+            verify_demo(root)
             with urlopen("http://127.0.0.1:17890/", timeout=2) as response:
                 if b"PersonalContext" not in response.read():
                     raise RuntimeError("Fresh clone did not serve the portal")
@@ -91,7 +82,7 @@ def main():
             if hooks != (original_hooks or ".githooks"):
                 raise RuntimeError("Git hooks path was not preserved or configured")
             subprocess.run(
-                [str(clone / ".venv/Scripts/python.exe"), "-m", "personalcontext", "--shutdown"],
+                [str(clone / ".venv/Scripts/python.exe"), "-m", "personalcontext", "--demo", "--shutdown"],
                 cwd=clone, env=environment, capture_output=True, check=True, timeout=20,
             )
             if process.wait(timeout=20) != 0:
