@@ -9,7 +9,7 @@ branch_labels = None
 depends_on = None
 
 
-def upgrade():
+def upgrade() -> None:
     op.create_table(
         "app_metadata",
         sa.Column("key", sa.Text(), primary_key=True),
@@ -17,5 +17,5 @@ def upgrade():
     )
 
 
-def downgrade():
+def downgrade() -> None:
     op.drop_table("app_metadata")

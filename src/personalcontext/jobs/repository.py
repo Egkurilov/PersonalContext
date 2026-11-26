@@ -1,8 +1,9 @@
+import sqlite3
 import time
 import uuid
 
 
-def enqueue(connection, kind, key):
+def enqueue(connection: sqlite3.Connection, kind: str, key: str) -> bool:
     connection.execute("BEGIN IMMEDIATE")
     previous = connection.execute("SELECT kind FROM jobs WHERE idempotency_key=?", (key,)).fetchone()
     if previous:
@@ -13,7 +14,7 @@ def enqueue(connection, kind, key):
     return True
 
 
-def claim(connection, kinds, lease_seconds):
+def claim(connection: sqlite3.Connection, kinds: tuple[str, ...], lease_seconds: float) -> tuple[str, str, int, str] | None:
     if not kinds:
         return None
     now = time.time()
@@ -41,7 +42,7 @@ def claim(connection, kinds, lease_seconds):
     return key, kind, attempts + 1, token
 
 
-def finish(connection, key, token, attempts, succeeded):
+def finish(connection: sqlite3.Connection, key: str, token: str, attempts: int, succeeded: bool) -> None:
     connection.execute("BEGIN IMMEDIATE")
     status = "done" if succeeded else "failed" if attempts >= 5 else "pending"
     retry_at = 0 if succeeded else time.time() + min(1800, 2 ** attempts)

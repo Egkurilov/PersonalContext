@@ -30,9 +30,9 @@ def main() -> int:
         return request_shutdown(data_dir)
     data_dir.mkdir(parents=True, exist_ok=True)
     name = mutex_name(data_dir)
-    mutex = win32event.CreateMutex(None, False, name)
+    mutex = win32event.CreateMutex(None, False, name)  # type: ignore[arg-type]  # Default security attributes are supported by pywin32.
     if win32api.GetLastError() == winerror.ERROR_ALREADY_EXISTS:
-        win32api.CloseHandle(mutex)
+        mutex.Close()
         webbrowser.open("http://127.0.0.1:17890/")
         return 0
     stop_event = win32event.CreateEvent(None, True, False, name + "-stop")
@@ -60,7 +60,7 @@ def main() -> int:
             pystray.MenuItem("Открыть", lambda: webbrowser.open("http://127.0.0.1:17890/"), default=True),
             pystray.MenuItem("Выход", lambda icon: icon.stop()),
         ))
-        def watch_shutdown():
+        def watch_shutdown() -> None:
             win32event.WaitForSingleObject(stop_event, win32event.INFINITE)
             icon.stop()
 
@@ -80,7 +80,7 @@ def main() -> int:
     finally:
         listener.close()
         win32api.CloseHandle(stop_event)
-        win32api.CloseHandle(mutex)
+        mutex.Close()
 
 
 if __name__ == "__main__":

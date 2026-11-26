@@ -16,3 +16,4 @@ spool/
 keys/
 PersonalContext.spec
 *.dpapi
+.mypy_cache/

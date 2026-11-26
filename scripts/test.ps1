@@ -5,6 +5,8 @@ try {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & .venv/Scripts/ruff check src tests scripts/*.py
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & .venv/Scripts/mypy src/personalcontext
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & .venv/Scripts/python -m unittest discover -s tests -v
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     npm ci --prefix frontend

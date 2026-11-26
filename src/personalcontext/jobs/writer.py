@@ -2,21 +2,25 @@ import asyncio
 import queue
 import sqlite3
 import threading
+from collections.abc import Callable
 from concurrent.futures import Future
 from pathlib import Path
+from typing import Any, TypeVar
+
+T = TypeVar("T")
 
 
 class Writer:
-    def __init__(self, path: Path, capacity: int = 32):
+    def __init__(self, path: Path, capacity: int = 32) -> None:
         self.path = path
-        self.queue = queue.Queue(maxsize=capacity)
+        self.queue: queue.Queue[tuple[Callable[[sqlite3.Connection], Any], Future[Any]] | None] = queue.Queue(maxsize=capacity)
         self.closed = False
         self.lock = threading.Lock()
-        self.ready = Future()
+        self.ready: Future[None] = Future()
         self.thread = threading.Thread(target=self._run, name="sqlite-writer", daemon=True)
         self.thread.start()
 
-    def _run(self):
+    def _run(self) -> None:
         connection = None
         try:
             connection = sqlite3.connect(self.path, timeout=5)
@@ -69,11 +73,11 @@ class Writer:
                     self.queue.task_done()
             connection.close()
 
-    async def start(self):
+    async def start(self) -> None:
         await asyncio.wrap_future(self.ready)
 
-    async def submit(self, operation):
-        future = Future()
+    async def submit(self, operation: Callable[[sqlite3.Connection], T]) -> T:
+        future: Future[T] = Future()
         with self.lock:
             if self.closed:
                 raise RuntimeError("Writer is closed")
@@ -83,7 +87,7 @@ class Writer:
                 raise RuntimeError("Writer queue is full") from error
         return await asyncio.wrap_future(future)
 
-    async def close(self):
+    async def close(self) -> None:
         with self.lock:
             should_stop = not self.closed
             self.closed = True

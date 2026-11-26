@@ -9,7 +9,7 @@ branch_labels = None
 depends_on = None
 
 
-def upgrade():
+def upgrade() -> None:
     op.create_table(
         "jobs",
         sa.Column("idempotency_key", sa.Text(), primary_key=True),
@@ -24,6 +24,6 @@ def upgrade():
     op.create_index("ix_jobs_due", "jobs", ["status", "retry_at", "lease_until"])
 
 
-def downgrade():
+def downgrade() -> None:
     op.drop_index("ix_jobs_due", table_name="jobs")
     op.drop_table("jobs")
