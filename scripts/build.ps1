@@ -12,6 +12,8 @@ try {
     $compiler = & "$PSScriptRoot/ensure_inno.ps1"
     & $compiler /Qp installer/PersonalContext.iss
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & .venv/Scripts/python scripts/smoke_installer_repro.py $compiler
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & .venv/Scripts/python scripts/smoke_installer.py
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     $hash = (Get-FileHash dist/PersonalContext-Setup.exe -Algorithm SHA256).Hash.ToLowerInvariant()

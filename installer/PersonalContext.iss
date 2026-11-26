@@ -21,7 +21,7 @@ RestartApplications=no
 UninstallDisplayIcon={app}\PersonalContext.exe
 
 [Files]
-Source: "..\dist\PersonalContext\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\PersonalContext\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs notimestamp
 
 [Icons]
 Name: "{autoprograms}\PersonalContext"; Filename: "{app}\PersonalContext.exe"

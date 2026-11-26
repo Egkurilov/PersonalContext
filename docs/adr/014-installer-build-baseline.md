@@ -8,5 +8,8 @@ script rejects other compiler versions using Inno's preprocessor version.
 Updates require review of the upstream release and checksum, an ADR change,
 and renewed Windows installer and clean-machine testing. A version pin does
 not prove bit-identical builds or independently authenticate cached files.
+Embedded files omit source timestamps. A smoke test recompiles from the same
+packaged tree after changing a fixture file's timestamp and compares installer
+bytes; this does not establish reproducibility of independently built trees.
 
 Reference: https://github.com/jrsoftware/issrc/releases/tag/is-6_7_4

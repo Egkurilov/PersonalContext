@@ -55,5 +55,7 @@ jobs:
           $compiler = & ./scripts/ensure_inno.ps1
           & $compiler /Qp installer/PersonalContext.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          uv run python scripts/smoke_installer_repro.py $compiler
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - if: runner.os == 'Windows'
         run: uv run python scripts/smoke_installer.py
