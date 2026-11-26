@@ -9,7 +9,7 @@ dependencies = [
     "alembic>=1.14,<2",
     "pystray>=0.19,<1; sys_platform == 'win32'",
     "pywin32>=308; sys_platform == 'win32'",
-    "pillow>=11,<13",
+    "pillow>=13,<14",
 ]
 
 [dependency-groups]
