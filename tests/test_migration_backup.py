@@ -11,6 +11,28 @@ from personalcontext.storage.restore import restore_backup
 
 @unittest.skipUnless(sys.platform == "win32", "DPAPI requires Windows")
 class MigrationBackupTests(unittest.TestCase):
+    def test_busy_backup_leaves_no_file_and_preserves_source(self):
+        from functools import partial
+        from unittest.mock import patch
+
+        from personalcontext.storage.backup import backup_database
+        from personalcontext.storage.snapshot import copy_snapshot
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "context.db"
+            with closing(sqlite3.connect(path)) as owner:
+                owner.execute("CREATE TABLE sample (value TEXT)")
+                owner.execute("INSERT INTO sample VALUES ('synthetic')")
+                owner.commit()
+                owner.execute("BEGIN EXCLUSIVE")
+                with (closing(sqlite3.connect(path, timeout=0.05)) as source,
+                      patch("personalcontext.storage.backup.copy_snapshot", partial(copy_snapshot, busy_timeout=0.25)),
+                      self.assertRaisesRegex(sqlite3.OperationalError, "backup.*busy")):
+                    backup_database(source, path)
+                self.assertEqual(list(path.parent.glob("context.db.*.dpapi")), [])
+                owner.rollback()
+                self.assertEqual(owner.execute("SELECT value FROM sample").fetchone(), ("synthetic",))
+
     def test_existing_database_is_backed_up_before_first_migration(self):
         import win32crypt
 

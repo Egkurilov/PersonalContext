@@ -4,12 +4,14 @@ import uuid
 from contextlib import closing
 from pathlib import Path
 
+from personalcontext.storage.snapshot import copy_snapshot
+
 
 def backup_database(source: sqlite3.Connection, path: Path) -> Path:
     import win32crypt
 
     with closing(sqlite3.connect(":memory:")) as snapshot:
-        source.backup(snapshot)
+        copy_snapshot(source, snapshot)
         if snapshot.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
             raise sqlite3.DatabaseError("Backup integrity check failed")
         # A WAL source leaves WAL markers in the serialized database header.
