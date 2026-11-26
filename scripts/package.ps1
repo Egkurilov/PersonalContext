@@ -9,6 +9,8 @@ try {
     $env:SOURCE_DATE_EPOCH = $epoch
     & .venv/Scripts/pyinstaller --noconfirm --clean --onedir --name PersonalContext --add-data 'frontend/dist;frontend/dist' --add-data 'schemas;schemas' --add-data 'src/personalcontext/migrations;personalcontext/migrations' --collect-all alembic --copy-metadata alembic src/personalcontext/__main__.py
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & .venv/Scripts/python scripts/normalize_base_zip.py
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & .venv/Scripts/python scripts/prune_alembic_record.py
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 } finally {

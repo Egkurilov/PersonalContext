@@ -61,3 +61,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - if: runner.os == 'Windows'
         run: uv run python scripts/smoke_installer.py
+      - if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $compiler = & ./scripts/ensure_inno.ps1
+          uv run python scripts/smoke_clone_repro.py $compiler
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

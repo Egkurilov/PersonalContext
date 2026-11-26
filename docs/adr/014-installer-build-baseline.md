@@ -13,7 +13,11 @@ packaged tree after changing a fixture file's timestamp and compares installer
 bytes; this does not establish reproducibility from separate source checkouts.
 PyInstaller uses a fixed Python hash seed and the Git commit timestamp while
 packaging; the build checks every file and directory against a second packaging
-run in the same workspace. Cross-machine reproducibility is not yet established.
+run in the same workspace. CI also compares two offline, separately created
+local clones of the exact checked-out commit, including their installers.
+Cross-machine reproducibility is not yet established.
+The generated `base_library.zip` is sorted by member name after rejecting
+duplicates and unexpected compression/flags; module bytes are preserved.
 The bundled Alembic RECORD omits the virtualenv-generated `alembic.exe`
 launcher, which is not shipped and whose hash depends on the virtualenv path.
 Other metadata is retained; SBOM generation reads the unchanged environment.
