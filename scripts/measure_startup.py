@@ -7,6 +7,8 @@ import time
 from pathlib import Path
 from urllib.request import urlopen
 
+from check_listeners import verify_listeners
+
 
 def measure_fresh_start(executable: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="personalcontext-cold-start-") as directory:
@@ -25,6 +27,7 @@ def measure_fresh_start(executable: Path) -> None:
                         if response.read() == b'{"status":"ready"}':
                             elapsed = time.monotonic() - started
                             print(f"Fresh API readiness in {elapsed:.3f}s on {platform.platform()}, logical CPUs={os.cpu_count()}")
+                            verify_listeners(process.pid)
                             browser_stub = Path(directory) / "browser_stub.py"
                             browser_marker = Path(directory) / "browser_marker.txt"
                             browser_stub.write_text(
