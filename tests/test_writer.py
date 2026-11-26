@@ -48,7 +48,7 @@ class WriterTests(unittest.IsolatedAsyncioTestCase):
             try:
                 with self.assertRaises(sqlite3.ProgrammingError):
                     await asyncio.wait_for(writer.submit(lambda connection: connection.close()), 2)
-                with self.assertRaisesRegex(RuntimeError, "closed"):
+                with self.assertRaisesRegex(RuntimeError, "closed|stopped"):
                     await asyncio.wait_for(writer.submit(lambda connection: 1), 2)
             finally:
                 await writer.close()

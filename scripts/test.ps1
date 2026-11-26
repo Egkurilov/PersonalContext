@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 Push-Location (Join-Path $PSScriptRoot '..')
 try {
-    python -m uv sync --locked
+    & "$PSScriptRoot/uv.ps1" sync --locked
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & .venv/Scripts/ruff check src tests scripts/*.py
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
