@@ -6,6 +6,8 @@ try {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & .venv/Scripts/python scripts/check_python.py
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & .venv/Scripts/python scripts/check_frontend.py
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     Write-Host "PersonalContext: checking Git hooks"
     $hooksPath = git config --get core.hooksPath
     if (-not $hooksPath) {

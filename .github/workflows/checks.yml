@@ -4,7 +4,7 @@ jobs:
   checks:
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-2025, ubuntu-24.04]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -13,9 +13,10 @@ jobs:
           version: '0.13.10'
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version-file: '.node-version'
       - run: uv sync --locked
       - run: uv run python scripts/check_python.py
+      - run: uv run python scripts/check_frontend.py
       - run: uv run python scripts/check_index.py
       - run: uv run ruff check src tests scripts
       - run: uv run mypy src/personalcontext
