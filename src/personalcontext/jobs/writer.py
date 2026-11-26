@@ -23,6 +23,8 @@ class Writer:
             connection.execute("PRAGMA foreign_keys=ON")
             connection.execute("PRAGMA busy_timeout=5000")
             connection.execute("PRAGMA synchronous=FULL")
+            connection.execute("BEGIN IMMEDIATE")
+            connection.rollback()
         except Exception as error:  # noqa: BLE001 - propagate failures to the submitting task
             if connection is not None:
                 connection.close()

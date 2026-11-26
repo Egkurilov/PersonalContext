@@ -33,3 +33,19 @@ class AppTests(unittest.TestCase):
             app = create_app(Path(directory) / "missing" / "context.db")
             with self.assertRaises(sqlite3.OperationalError), TestClient(app):
                 pass
+
+    def test_locked_database_prevents_readiness_then_recovers(self):
+        from personalcontext.storage.initialize import initialize_database
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "context.db"
+            initialize_database(path)
+            with closing(sqlite3.connect(path)) as locker:
+                locker.execute("BEGIN IMMEDIATE")
+                app = create_app(path)
+                with self.assertRaisesRegex(sqlite3.OperationalError, "locked"), TestClient(app):
+                    pass
+                locker.rollback()
+            app = create_app(path)
+            with TestClient(app, base_url="http://127.0.0.1:17890", client=("127.0.0.1", 1)) as client:
+                self.assertEqual(client.get("/readyz").json(), {"status": "ready"})
