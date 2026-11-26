@@ -13,6 +13,8 @@ def main():
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 17890))
     executable = Path(sys.argv[1] if len(sys.argv) > 1 else "dist/PersonalContext/PersonalContext.exe").resolve()
+    for name in ("health.v1.schema.json", "readiness.v1.schema.json"):
+        assert (executable.parent / "_internal" / "schemas" / name).read_bytes() == (Path("schemas") / name).read_bytes()
     with tempfile.TemporaryDirectory() as directory:
         data_dir = Path(directory) / "PersonalContext" / "data"
         data_dir.mkdir(parents=True)

@@ -48,3 +48,7 @@ Unit: schema, URL/token sanitization, policy precedence (deny wins), math, date/
 
 ## Расширение v1.3
 PC-026–035 реализуют INTELLIGENCE.md. Не дублировать job scheduler/ранжировщик/внешний клиент. Policy and evidence recheck перед публикацией, выдачей и commit; все новые tables/indices/cache входят в purge и backup/restore. Recommendation eval и pilot metrics отделены от обычной LLM retrieval eval. Не логировать outbound private context, не отправлять его во внешнюю сеть.
+
+## Схемы состояния приложения
+
+Общие JSON Schema для ответов `/healthz` и `/readyz` находятся в `schemas/` и генерируются командой `.venv/Scripts/python scripts/generate_schemas.py` из моделей приложения. Проверка тестирует оба успешных ответа, состояние недоступности и совпадение опубликованных схем с моделями. Это контракты состояния приложения. Схема событий и их полей остаётся отдельной незавершённой частью реализации.

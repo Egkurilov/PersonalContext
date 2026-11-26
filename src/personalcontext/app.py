@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+from personalcontext.contracts.health import HealthResponse, ReadinessResponse
 from personalcontext.jobs.scheduler import Scheduler
 from personalcontext.storage.initialize import initialize_database
 
@@ -42,14 +43,14 @@ def create_app(database_path: Path, web_root: Path | None = None) -> FastAPI:
         return await call_next(request)
 
     @app.get("/healthz")
-    async def health() -> dict[str, str]:
-        return {"status": "ok"}
+    async def health() -> HealthResponse:
+        return HealthResponse(status="ok")
 
     @app.get("/readyz", response_model=None)
-    async def ready() -> dict[str, str] | JSONResponse:
+    async def ready() -> ReadinessResponse | JSONResponse:
         if not getattr(app.state, "ready", False) or app.state.scheduler.task.done():
-            return JSONResponse({"status": "unavailable"}, status_code=503)
-        return {"status": "ready"}
+            return JSONResponse(ReadinessResponse(status="unavailable").model_dump(), status_code=503)
+        return ReadinessResponse(status="ready")
 
     if web_root is not None:
         app.mount("/assets", StaticFiles(directory=web_root / "assets"), name="assets")
