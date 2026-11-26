@@ -60,6 +60,9 @@ def main() -> None:
         output = repository / "dist/repro-manifest.json"
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+        with output.open("rb") as stream:
+            print(f"Reproducibility report SHA-256: {hashlib.file_digest(stream, 'sha256').hexdigest()}")
+        print(f"Installer SHA-256: {left[1].hex()}")
         print(f"Separate clones: {len(left[0])} bundle entries and installer bytes identical")
 
 
