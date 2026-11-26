@@ -8,6 +8,8 @@ import time
 from pathlib import Path
 from urllib.request import urlopen
 
+from measure_startup import measure_fresh_start
+
 
 def main():
     with socket.socket() as probe:
@@ -15,6 +17,7 @@ def main():
     executable = Path(sys.argv[1] if len(sys.argv) > 1 else "dist/PersonalContext/PersonalContext.exe").resolve()
     for name in ("health.v1.schema.json", "readiness.v1.schema.json"):
         assert (executable.parent / "_internal" / "schemas" / name).read_bytes() == (Path("schemas") / name).read_bytes()
+    measure_fresh_start(executable)
     with tempfile.TemporaryDirectory() as directory:
         data_dir = Path(directory) / "PersonalContext" / "data"
         data_dir.mkdir(parents=True)
