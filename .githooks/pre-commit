@@ -1,0 +1,8 @@
+#!/bin/sh
+if [ -x .venv/Scripts/python.exe ]; then
+    exec .venv/Scripts/python.exe scripts/check_index.py
+elif [ -x .venv/bin/python ]; then
+    exec .venv/bin/python scripts/check_index.py
+fi
+printf '%s\n' 'PersonalContext commit guard requires the project virtual environment.' >&2
+exit 1
