@@ -1,0 +1,17 @@
+{
+  "enum": [
+    "app_active",
+    "idle",
+    "lock",
+    "web_visit",
+    "web_active",
+    "media_play",
+    "shared_item",
+    "document_reference",
+    "imported_visit",
+    "note",
+    "ocr_text"
+  ],
+  "type": "string",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
