@@ -4,10 +4,13 @@ import socket
 import sqlite3
 import subprocess
 import tempfile
+import threading
 import time
 from contextlib import closing
 from pathlib import Path
 from urllib.request import urlopen
+
+from setup_diagnostics import observe_setup
 
 
 def main():
@@ -53,8 +56,11 @@ def main():
             environment.pop(name, None)
         process = subprocess.Popen(
             [shell, "-NoProfile", "-File", str(clone / "scripts/dev.ps1")], cwd=clone, env=environment,
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NO_WINDOW,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, creationflags=subprocess.CREATE_NO_WINDOW,
         )
+        state = {"stage": "not started", "reason": "unspecified"}
+        observer = threading.Thread(target=observe_setup, args=(process.stdout, state), daemon=True)
+        observer.start()
         try:
             deadline = time.monotonic() + 180
             while time.monotonic() < deadline and process.poll() is None:
@@ -66,7 +72,8 @@ def main():
                 except OSError:
                     time.sleep(0.25)
             else:
-                raise RuntimeError(f"Fresh clone did not become ready; process exit={process.poll()}")
+                observer.join(timeout=2)
+                raise RuntimeError(f"Fresh clone failed; stage={state['stage']}; reason={state['reason']}; exit={process.poll()}")
             database = root / "localdata/PersonalContext/data/context.db"
             with closing(sqlite3.connect(database)) as connection:
                 if connection.execute("SELECT count(*) FROM jobs").fetchone()[0] != 0:
@@ -95,6 +102,8 @@ def main():
             if process.poll() is None:
                 subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], capture_output=True, check=False, timeout=15)
                 process.wait(timeout=10)
+            observer.join(timeout=5)
+            process.stdout.close()
 
 
 if __name__ == "__main__":
