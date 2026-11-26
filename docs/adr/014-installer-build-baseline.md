@@ -14,5 +14,8 @@ bytes; this does not establish reproducibility from separate source checkouts.
 PyInstaller uses a fixed Python hash seed and the Git commit timestamp while
 packaging; the build checks every file and directory against a second packaging
 run in the same workspace. Cross-machine reproducibility is not yet established.
+The bundled Alembic RECORD omits the virtualenv-generated `alembic.exe`
+launcher, which is not shipped and whose hash depends on the virtualenv path.
+Other metadata is retained; SBOM generation reads the unchanged environment.
 
 Reference: https://github.com/jrsoftware/issrc/releases/tag/is-6_7_4

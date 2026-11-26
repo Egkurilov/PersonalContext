@@ -31,8 +31,10 @@ def main() -> None:
         raise RuntimeError("PowerShell is required for reproducibility smoke")
     subprocess.run([shell, "-NoProfile", "-File", str(repository / "scripts/package.ps1")],
                    cwd=repository, capture_output=True, check=True, timeout=240)
-    if before != manifest(bundle):
-        raise RuntimeError("Frozen build differs after a second packaging run")
+    after = manifest(bundle)
+    if before != after:
+        changed = sorted(set(before) ^ set(after) | {key for key in before.keys() & after.keys() if before[key] != after[key]})
+        raise RuntimeError("Frozen build differs after a second packaging run: " + ", ".join(changed[:10]))
     print(f"Frozen build identical across two packaging runs: {len(before)} entries")
 
 
