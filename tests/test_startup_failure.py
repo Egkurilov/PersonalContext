@@ -35,7 +35,8 @@ class StartupFailureTests(unittest.TestCase):
         from personalcontext.__main__ import main
         from personalcontext.storage.initialize import initialize_database
 
-        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {"LOCALAPPDATA": directory}), patch("sys.argv", ["personalcontext"]), patch("win32api.MessageBox") as message:
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {"LOCALAPPDATA": directory}), patch("sys.argv", ["personalcontext"]), patch("sys._MEIPASS", directory, create=True), patch("win32api.MessageBox") as message:
+            (Path(directory) / "frontend/dist/assets").mkdir(parents=True)
             path = Path(directory) / "PersonalContext/data/context.db"
             path.parent.mkdir(parents=True)
             initialize_database(path)
@@ -56,7 +57,8 @@ class StartupFailureTests(unittest.TestCase):
     def test_restarts_and_becomes_ready_after_port_is_released(self):
         from personalcontext.__main__ import main
 
-        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {"LOCALAPPDATA": directory}), patch("sys.argv", ["personalcontext"]), patch("win32api.MessageBox") as message:
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {"LOCALAPPDATA": directory}), patch("sys.argv", ["personalcontext"]), patch("sys._MEIPASS", directory, create=True), patch("win32api.MessageBox") as message:
+            (Path(directory) / "frontend/dist/assets").mkdir(parents=True)
             with socket.socket() as occupied:
                 occupied.bind(("127.0.0.1", 17890))
                 occupied.listen()
