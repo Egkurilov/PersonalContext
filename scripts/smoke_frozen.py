@@ -32,6 +32,8 @@ def main():
                         assert response.read() == b'{"status":"ready"}'
                     with urlopen("http://127.0.0.1:17890/", timeout=1) as response:
                         assert b"PersonalContext" in response.read()
+                    with urlopen("http://127.0.0.1:17890/settings/privacy", timeout=1) as response:
+                        assert b"PersonalContext" in response.read()
                     backups = list(data_dir.glob("context.db.*.dpapi"))
                     assert len(backups) == 1
                     restored = data_dir / "restored.db"

@@ -54,8 +54,16 @@ def create_app(database_path: Path, web_root: Path | None = None) -> FastAPI:
     if web_root is not None:
         app.mount("/assets", StaticFiles(directory=web_root / "assets"), name="assets")
 
-        @app.get("/")
         async def index() -> FileResponse:
             return FileResponse(web_root / "index.html")
+
+        ui_paths = (
+            "/", "/overview", "/interests", "/timeline", "/knowledge", "/projects",
+            "/projects/{project_id}", "/projects/{project_id}/resume", "/search", "/assistant",
+            "/sources", "/settings/privacy", "/settings/resources", "/insights", "/recommendations",
+            "/memory", "/goals", "/research", "/research/radar", "/pilot/summary",
+        )
+        for path in ui_paths:
+            app.add_api_route(path, index, methods=["GET"], include_in_schema=False)
 
     return app
