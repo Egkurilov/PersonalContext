@@ -5,6 +5,8 @@ CPython 3.12.16, specified in `.python-version`; development scripts and CI
 select it through uv and verify the interpreter before running checks. CI pins
 uv 0.13.10. Python and npm dependencies remain separately locked. This fixes
 the selected interpreter version, not every input needed for bit-identical builds.
+Frozen and installed smoke tests compare the bundled Python DLL against the
+DLL of the pinned interpreter by SHA-256, so a stale runtime fails the check.
 
 Python 3.12.16 is a security release; python.org distributes it as source only.
 uv supplies its managed prebuilt CPython for Windows and Linux. The provider

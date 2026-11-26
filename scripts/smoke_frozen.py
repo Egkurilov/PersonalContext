@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 from urllib.request import urlopen
 
+from check_frozen_python import verify_frozen_python
 from measure_startup import measure_fresh_start
 
 
@@ -15,6 +16,7 @@ def main():
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 17890))
     executable = Path(sys.argv[1] if len(sys.argv) > 1 else "dist/PersonalContext/PersonalContext.exe").resolve()
+    verify_frozen_python(executable)
     for name in ("health.v1.schema.json", "readiness.v1.schema.json", "event-id.v1.schema.json", "event-kind.v1.schema.json", "event-quality.v1.schema.json", "event-timing.v1.schema.json", "event-temporal.v1.schema.json"):
         assert (executable.parent / "_internal" / "schemas" / name).read_bytes() == (Path("schemas") / name).read_bytes()
     measure_fresh_start(executable)
