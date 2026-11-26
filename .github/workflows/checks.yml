@@ -67,3 +67,10 @@ jobs:
           $compiler = & ./scripts/ensure_inno.ps1
           uv run python scripts/smoke_clone_repro.py $compiler
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: reproducibility-manifest
+          path: dist/repro-manifest.json
+          if-no-files-found: error
+          retention-days: 7

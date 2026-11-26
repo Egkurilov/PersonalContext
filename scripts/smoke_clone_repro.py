@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -6,6 +7,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+from repro_report import build_report
 from smoke_frozen_repro import manifest
 
 
@@ -54,6 +56,10 @@ def main() -> None:
         if left != right:
             changed = sorted(set(left[0]) ^ set(right[0]) | {key for key in left[0].keys() & right[0].keys() if left[0][key] != right[0][key]})
             raise RuntimeError(f"Clone outputs differ; installer_equal={left[1] == right[1]}; entries={changed[:10]}")
+        report = build_report(commit, left[0], left[1])
+        output = repository / "dist/repro-manifest.json"
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
         print(f"Separate clones: {len(left[0])} bundle entries and installer bytes identical")
 
 

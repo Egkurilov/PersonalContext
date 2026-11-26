@@ -16,6 +16,9 @@ packaging; the build checks every file and directory against a second packaging
 run in the same workspace. CI also compares two offline, separately created
 local clones of the exact checked-out commit, including their installers.
 Cross-machine reproducibility is not yet established.
+CI retains a seven-day report containing only the Git revision, relative bundle
+paths, directory markers, and SHA-256 digests; it contains no absolute paths or
+machine identifiers. This report allows comparison with a local clone build.
 The generated `base_library.zip` is sorted by member name after rejecting
 duplicates and unexpected compression/flags; module bytes are preserved.
 The bundled Alembic RECORD omits the virtualenv-generated `alembic.exe`
