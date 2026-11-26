@@ -9,6 +9,7 @@ from personalcontext.contracts.event_common import (
     EventQuality,
     EventTiming,
 )
+from personalcontext.contracts.event_temporal import EventTemporal
 from personalcontext.contracts.health import HealthResponse, ReadinessResponse
 
 
@@ -19,6 +20,7 @@ def main() -> None:
         ("health", HealthResponse), ("readiness", ReadinessResponse),
         ("event-id", EventId), ("event-kind", EventKind),
         ("event-quality", EventQuality), ("event-timing", EventTiming),
+        ("event-temporal", EventTemporal),
     )
     for name, contract in contracts:
         schema = TypeAdapter(contract).json_schema()
