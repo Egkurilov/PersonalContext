@@ -44,8 +44,10 @@ jobs:
             dist/python-licenses.json
       - if: runner.os == 'Windows'
         shell: pwsh
-        run: .venv/Scripts/pyinstaller --noconfirm --clean --onedir --name PersonalContext --add-data 'frontend/dist;frontend/dist' --add-data 'schemas;schemas' --add-data 'src/personalcontext/migrations;personalcontext/migrations' --collect-all alembic --copy-metadata alembic src/personalcontext/__main__.py
+        run: ./scripts/package.ps1
 
+      - if: runner.os == 'Windows'
+        run: uv run python scripts/smoke_frozen_repro.py
       - if: runner.os == 'Windows'
         run: uv run python scripts/smoke_frozen.py
 

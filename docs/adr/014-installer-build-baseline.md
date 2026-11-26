@@ -10,6 +10,9 @@ and renewed Windows installer and clean-machine testing. A version pin does
 not prove bit-identical builds or independently authenticate cached files.
 Embedded files omit source timestamps. A smoke test recompiles from the same
 packaged tree after changing a fixture file's timestamp and compares installer
-bytes; this does not establish reproducibility of independently built trees.
+bytes; this does not establish reproducibility from separate source checkouts.
+PyInstaller uses a fixed Python hash seed and the Git commit timestamp while
+packaging; the build checks every file and directory against a second packaging
+run in the same workspace. Cross-machine reproducibility is not yet established.
 
 Reference: https://github.com/jrsoftware/issrc/releases/tag/is-6_7_4
