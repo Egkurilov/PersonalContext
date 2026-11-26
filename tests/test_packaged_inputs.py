@@ -19,6 +19,8 @@ class PackagedInputTests(unittest.TestCase):
             for path in (source, bundled):
                 (path / "env.py").write_bytes(b"synthetic")
                 (path / "versions/0001.py").write_bytes(b"synthetic version")
+            (source / "env.py").write_bytes(b"synthetic\r\n")
+            (bundled / "env.py").write_bytes(b"synthetic\n")
             (source / "__pycache__").mkdir()
             (source / "__pycache__/env.pyc").write_bytes(b"generated")
             module.verify_migrations(source, bundled)

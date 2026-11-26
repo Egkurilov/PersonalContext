@@ -30,6 +30,9 @@ and restored afterward. The packaged migration tree contains source `.py`
 files only, excluding generated caches. Smoke tests reject application-local
 UCRT/API-set DLLs, which Windows 11 supplies as OS components, while the Python
 distribution's VC runtime remains bundled. Clean-Windows validation is pending.
+The bundled HTML entry point, JSON schemas and Python migration sources use
+UTF-8 with CRLF normalized to LF. This avoids platform checkout settings
+changing their packaged bytes; the source working tree is never rewritten.
 
 Reference: https://learn.microsoft.com/en-us/cpp/windows/universal-crt-deployment
 

@@ -11,7 +11,7 @@ def verify_migrations(source: Path, bundled: Path) -> None:
                 result[path.relative_to(root).as_posix()] = path.read_bytes()
         return result
 
-    expected = files(source, "*.py")
+    expected = {name: data.replace(b"\r\n", b"\n") for name, data in files(source, "*.py").items()}
     actual = files(bundled, "*")
     if not expected or expected != actual:
         raise ValueError("Packaged migration files differ from source")

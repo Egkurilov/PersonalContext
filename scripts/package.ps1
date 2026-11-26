@@ -19,6 +19,8 @@ try {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & .venv/Scripts/python scripts/normalize_base_zip.py
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & .venv/Scripts/python scripts/normalize_packaged_text.py
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & .venv/Scripts/python scripts/prune_alembic_record.py
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 } finally {
