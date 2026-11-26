@@ -24,5 +24,13 @@ duplicates and unexpected compression/flags; module bytes are preserved.
 The bundled Alembic RECORD omits the virtualenv-generated `alembic.exe`
 launcher, which is not shipped and whose hash depends on the virtualenv path.
 Other metadata is retained; SBOM generation reads the unchanged environment.
+During PyInstaller execution, DLL search uses only Windows system directories
+and the pinned Python environment; inherited Python path overrides are cleared
+and restored afterward. The packaged migration tree contains source `.py`
+files only, excluding generated caches. Smoke tests reject application-local
+UCRT/API-set DLLs, which Windows 11 supplies as OS components, while the Python
+distribution's VC runtime remains bundled. Clean-Windows validation is pending.
+
+Reference: https://learn.microsoft.com/en-us/cpp/windows/universal-crt-deployment
 
 Reference: https://github.com/jrsoftware/issrc/releases/tag/is-6_7_4

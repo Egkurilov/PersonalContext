@@ -9,6 +9,7 @@ from pathlib import Path
 from urllib.request import urlopen
 
 from check_frozen_python import verify_frozen_python
+from check_packaged_inputs import verify_migrations, verify_system_runtime
 from measure_startup import measure_fresh_start
 
 
@@ -17,9 +18,13 @@ def main():
         probe.bind(("127.0.0.1", 17890))
     executable = Path(sys.argv[1] if len(sys.argv) > 1 else "dist/PersonalContext/PersonalContext.exe").resolve()
     verify_frozen_python(executable)
+    migrations = executable.parent / "_internal/personalcontext/migrations"
+    verify_migrations(Path("src/personalcontext/migrations"), migrations)
+    verify_system_runtime(executable.parent / "_internal")
     for name in ("health.v1.schema.json", "readiness.v1.schema.json", "event-id.v1.schema.json", "event-kind.v1.schema.json", "event-quality.v1.schema.json", "event-timing.v1.schema.json", "event-temporal.v1.schema.json"):
         assert (executable.parent / "_internal" / "schemas" / name).read_bytes() == (Path("schemas") / name).read_bytes()
     measure_fresh_start(executable)
+    verify_migrations(Path("src/personalcontext/migrations"), migrations)
     with tempfile.TemporaryDirectory() as directory:
         data_dir = Path(directory) / "PersonalContext" / "data"
         data_dir.mkdir(parents=True)
