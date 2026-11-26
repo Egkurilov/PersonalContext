@@ -1,4 +1,5 @@
 import hashlib
+import io
 import json
 import os
 import shutil
@@ -8,13 +9,16 @@ import tempfile
 from pathlib import Path
 
 from repro_report import build_report
+from setup_diagnostics import observe_setup
 from smoke_frozen_repro import manifest
 
 
 def run(stage: str, command: list[str], cwd: Path, environment: dict[str, str]) -> str:
     result = subprocess.run(command, cwd=cwd, env=environment, capture_output=True, text=True, timeout=240, check=False)
     if result.returncode:
-        raise RuntimeError(f"{stage} failed with exit code {result.returncode}")
+        state = {"stage": "not started", "reason": "unspecified"}
+        observe_setup(io.BytesIO((result.stdout + "\n" + result.stderr).encode("utf-8")), state)
+        raise RuntimeError(f"{stage} failed with exit code {result.returncode}; reason={state['reason']}")
     return result.stdout.strip()
 
 
