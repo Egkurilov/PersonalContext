@@ -10,6 +10,7 @@ dependencies = [
     "pystray>=0.19,<1; sys_platform == 'win32'",
     "pywin32>=308; sys_platform == 'win32'",
     "pillow>=13,<14",
+    "argon2-cffi==25.1.0",
 ]
 
 [dependency-groups]
