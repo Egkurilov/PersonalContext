@@ -1,0 +1,8 @@
+:root { font-family: system-ui, sans-serif; color: #e9eef5; background: #111820; }
+body { margin: 0; }
+main { max-width: 52rem; margin: 12vh auto; padding: 2rem; }
+.brand { color: #91cdb2; font-weight: 700; }
+.demo-label { color: #ffd586; font-weight: 700; }
+h1 { font-size: clamp(2rem, 5vw, 3.5rem); }
+h2 { font-size: 1.25rem; }
+p, li { line-height: 1.6; color: #bdc9d5; }

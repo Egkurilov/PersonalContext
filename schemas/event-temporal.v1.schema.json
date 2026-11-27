@@ -1,0 +1,85 @@
+{
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "granularity": {
+            "const": "point"
+          }
+        },
+        "required": [
+          "granularity"
+        ]
+      },
+      "then": {
+        "properties": {
+          "duration_ms": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "granularity": {
+      "enum": [
+        "point",
+        "interval"
+      ],
+      "title": "Granularity",
+      "type": "string"
+    },
+    "duration_ms": {
+      "anyOf": [
+        {
+          "maximum": 900000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Duration Ms"
+    },
+    "started_at": {
+      "format": "date-time",
+      "maxLength": 128,
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?(Z|\\+00:00)$",
+      "title": "Started At",
+      "type": "string"
+    },
+    "ended_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "maxLength": 128,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?(Z|\\+00:00)$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Ended At"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "maxLength": 128,
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?(Z|\\+00:00)$",
+      "title": "Observed At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "granularity",
+    "duration_ms",
+    "started_at",
+    "ended_at",
+    "observed_at"
+  ],
+  "title": "EventTemporal",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

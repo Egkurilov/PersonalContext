@@ -1,0 +1,7 @@
+{
+  "maxLength": 36,
+  "minLength": 36,
+  "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[47][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+  "type": "string",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
