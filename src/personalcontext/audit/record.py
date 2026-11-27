@@ -5,7 +5,7 @@ import uuid
 
 EVENTS = frozenset({"owner_bootstrap", "owner_login", "owner_logout", "pairing_issue", "device_enroll",
                     "device_revoke", "policy_update", "policy_pause", "restore",
-                    "source_create", "source_pause", "source_resume"})
+                    "source_create", "source_pause", "source_resume", "owner_session_rotate"})
 ACTORS = frozenset({"owner", "device", "local", "system", "anonymous"})
 RETENTION = 90 * 86400
 

@@ -5,7 +5,7 @@ import time
 
 from personalcontext.audit.record import record_audit
 
-_REVISIONS = {f"{number:04d}": number for number in range(1, 11)}
+_REVISIONS = {f"{number:04d}": number for number in range(1, 12)}
 _TABLES = {"owner_credentials": 3, "bootstrap_codes": 4, "owner_sessions": 5,
            "auth_rate_clocks": 6, "auth_attempts": 6, "pairing_codes": 7, "devices": 7,
            "capture_policy": 8, "capture_policy_sources": 8, "capture_policy_grants": 8, "security_audit": 9,

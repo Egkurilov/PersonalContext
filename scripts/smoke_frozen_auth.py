@@ -65,6 +65,8 @@ def main():
                 assert json.load(response) == {"role": "owner"}
             with post("/api/v1/auth/csrf", {}) as response:
                 csrf = json.load(response)["csrf"]
+            with post("/api/v1/auth/rotate", {}, csrf) as response:
+                csrf = json.load(response)["csrf"]
             preview = {"kind": "web", "source": "example.org",
                        "data": {"url": "https://example.org/article?tracking=synthetic"}}
             with post("/api/v1/privacy/preview", preview, csrf) as response:
@@ -98,7 +100,7 @@ def main():
                 raise AssertionError("Revoked device remains authorized")
             with opener.open(ORIGIN + "/api/v1/audit", timeout=5) as response:
                 audit = response.read()
-                assert b'"device_revoke"' in audit and device["token"].encode() not in audit
+                assert b'"device_revoke"' in audit and b'"owner_session_rotate"' in audit and device["token"].encode() not in audit
             with post("/api/v1/auth/logout", {}, csrf) as response:
                 assert response.status == 204
             try:
