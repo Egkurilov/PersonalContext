@@ -65,6 +65,16 @@ def main():
                 assert json.load(response) == {"role": "owner"}
             with post("/api/v1/auth/csrf", {}) as response:
                 csrf = json.load(response)["csrf"]
+            draft = {"version": 1, "paused": False, "ttl": 600, "allowed": ["synthetic-source"],
+                     "denied": [], "grants": [{"source": "synthetic-source", "scope": "metadata"}]}
+            request = Request(ORIGIN + "/api/v1/privacy/policy", data=json.dumps(draft).encode(), method="PATCH",
+                              headers={"Origin": ORIGIN, "Content-Type": "application/json", "X-CSRF-Token": csrf})
+            with opener.open(request, timeout=5) as response:
+                assert json.load(response)["version"] == 2
+            with post("/api/v1/privacy/pause", {}, csrf) as response:
+                assert response.status == 204
+            with opener.open(ORIGIN + "/api/v1/privacy/policy", timeout=5) as response:
+                assert json.load(response)["paused"] is True
             with post("/api/v1/devices/pairing-codes", {"scopes": "heartbeat"}, csrf) as response:
                 pairing = json.load(response)["code"]
             with post("/api/v1/devices/enroll", {"code": pairing}) as response:

@@ -16,7 +16,7 @@ class DatabaseInitializationTests(unittest.TestCase):
             with closing(sqlite3.connect(path)) as connection:
                 self.assertEqual(connection.execute("PRAGMA journal_mode").fetchone()[0], "wal")
                 connection.execute("CREATE VIRTUAL TABLE probe USING fts5(content)")
-                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0007")
+                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0008")
 
     def test_invalid_parent_fails(self):
         with tempfile.TemporaryDirectory() as directory:
