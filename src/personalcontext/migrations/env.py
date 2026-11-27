@@ -15,9 +15,15 @@ def run_migrations_online() -> None:
         connection.exec_driver_sql("PRAGMA busy_timeout=5000")
         connection.exec_driver_sql("PRAGMA synchronous=FULL")
         connection.commit()
-        context.configure(connection=connection, render_as_batch=True)
-        with context.begin_transaction():
-            context.run_migrations()
+        connection.exec_driver_sql("BEGIN IMMEDIATE")
+        try:
+            context.configure(connection=connection, render_as_batch=True, transactional_ddl=True)
+            with context.begin_transaction():
+                context.run_migrations()
+            connection.commit()
+        except BaseException:
+            connection.rollback()
+            raise
 
 
 run_migrations_online()

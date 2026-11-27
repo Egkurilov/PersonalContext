@@ -21,6 +21,10 @@ permission, or a trustworthy collector. The identity check alone is not an
 ingestion authorization. No real activity collection is enabled by this change.
 
 Migration 0010 preserves existing audit rows and creates the source registry.
+Alembic migrations run within an explicit SQLite `BEGIN IMMEDIATE` transaction;
+failure during the audit-table rebuild rolls back the schema, records and version
+together. The application still creates a DPAPI backup before upgrading an
+existing database; atomic migration does not replace backup and restore.
 Restore of a 0010 backup revokes device credentials and pauses every source,
 in addition to resetting owner credentials and pausing the global policy.
 Downgrade refuses to discard source records or source audit history; to roll
