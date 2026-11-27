@@ -9,6 +9,12 @@ def insert_owner_hash(connection: sqlite3.Connection, encoded: str) -> bool:
     if not is_supported_hash(encoded):
         raise ValueError("Invalid password hash")
     connection.execute("BEGIN IMMEDIATE")
+    return insert_owner_hash_in_transaction(connection, encoded)
+
+
+def insert_owner_hash_in_transaction(connection: sqlite3.Connection, encoded: str) -> bool:
+    if not connection.in_transaction or not is_supported_hash(encoded):
+        raise ValueError("Invalid password hash or transaction")
     result = connection.execute(
         "INSERT INTO owner_credentials(singleton, password_hash) VALUES (1, ?) "
         "ON CONFLICT(singleton) DO NOTHING",
