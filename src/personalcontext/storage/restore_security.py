@@ -5,11 +5,11 @@ import time
 
 from personalcontext.audit.record import record_audit
 
-_REVISIONS = {f"{number:04d}": number for number in range(1, 12)}
+_REVISIONS = {f"{number:04d}": number for number in range(1, 13)}
 _TABLES = {"owner_credentials": 3, "bootstrap_codes": 4, "owner_sessions": 5,
            "auth_rate_clocks": 6, "auth_attempts": 6, "pairing_codes": 7, "devices": 7,
            "capture_policy": 8, "capture_policy_sources": 8, "capture_policy_grants": 8, "security_audit": 9,
-           "sources": 10}
+           "sources": 10, "private_network_candidate": 12}
 
 
 def reset_restored_access(connection: sqlite3.Connection) -> None:
@@ -43,5 +43,7 @@ def reset_restored_access(connection: sqlite3.Connection) -> None:
     if revision >= 10:
         connection.execute("UPDATE sources SET paused=1,revision=CASE WHEN revision BETWEEN 1 AND ? "
                            "THEN revision+1 ELSE 1 END", (2**53 - 2,))
+    if revision >= 12:
+        connection.execute("DELETE FROM private_network_candidate")
     if revision >= 9:
         record_audit(connection, "restore", "system", int(time.time()))

@@ -33,6 +33,6 @@ class RotationMigrationTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "rotation audit history"):
                 command.downgrade(config, "0010")
             with closing(sqlite3.connect(path)) as connection:
-                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone(), ("0011",))
+                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone(), ("0012",))
                 rows = connection.execute("SELECT event_type FROM security_audit ORDER BY id").fetchall()
                 self.assertEqual(rows, [("source_create",), ("owner_session_rotate",)])

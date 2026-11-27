@@ -44,8 +44,26 @@ and no UI to protect the key passphrase; its loader accepts encrypted PKCS#8 PEM
 keys and supplies the recovered passphrase to the offline verifier. Real DPAPI
 round-trip, tampering and encrypted synthetic-key tests run on Windows. This is
 not protection against malware running as the same user; Python cannot guarantee
-erasure of a passphrase from process memory. Storage, file ACL and path checks,
-owner-facing TLS configuration and listener integration are not implemented.
+erasure of a passphrase from process memory.
+
+The owner-only local `GET/POST /api/v1/network/private/config` API prepares and
+stores a **disabled candidate**, never starts the listener. POST requires Origin,
+CSRF, owner session and an expected revision; it rechecks authorization after
+preflight. The owner places an encrypted PKCS#8 key and certificate chain as
+separate `.pem` files under `%LOCALAPPDATA%/PersonalContext/data/tls`; the API
+accepts their simple filenames, a private address, hostname, port, peer CIDRs,
+and a passphrase of 16–1024 UTF-8 bytes. Preparation requires a local fixed
+NTFS volume, files resolving inside that directory, matching trusted TLS and an
+encrypted key. Only the DPAPI-protected passphrase is saved. GET returns settings
+without the passphrase; both methods are forbidden on a private transport.
+The preflight is bounded and happens outside the SQLite writer. File ACL
+verification, listener activation and a settings UI remain unimplemented. Check
+the files and certificate again at actual startup: they can change after save.
+
+Migration `0012` adds the candidate and a payload-free audit category. Restore
+deletes the candidate and its protected passphrase along with other access state;
+the owner must configure it again. Downgrade refuses to discard a candidate or
+its audit events; restore a verified earlier backup to roll back.
 
 Private access is not wired to a listener or settings and is not available yet.
 Before enabling it, implement and verify certificate and key storage, client

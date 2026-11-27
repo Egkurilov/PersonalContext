@@ -20,6 +20,7 @@ from personalcontext.devices.device_http import router as device_access_router
 from personalcontext.devices.http_routes import router as device_router
 from personalcontext.jobs.scheduler import Scheduler
 from personalcontext.network.middleware import restrict_requests
+from personalcontext.network.settings_http import router as private_settings_router
 from personalcontext.privacy.http_routes import router as privacy_router
 from personalcontext.privacy.preview_routes import router as preview_router
 from personalcontext.privacy.runtime.latch import CaptureLatch
@@ -63,6 +64,7 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
             await scheduler.stop()
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app.state.private_tls_dir = database_path.parent / "tls"
     app.include_router(auth_router)
     app.include_router(rotation_router)
     app.include_router(audit_router)
@@ -72,6 +74,7 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
     app.include_router(preview_router)
     app.include_router(config_router)
     app.include_router(sources_router)
+    app.include_router(private_settings_router)
 
     app.middleware("http")(restrict_requests)
 

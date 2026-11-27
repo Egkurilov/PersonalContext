@@ -14,6 +14,9 @@ from personalcontext.auth.owner_store import find_owner_hash
 from personalcontext.auth.password_hash import hash_password
 from personalcontext.devices.pairing import enroll, issue_pairing
 from personalcontext.devices.scopes import authorize_device
+from personalcontext.network.boundary import PrivateBoundary
+from personalcontext.network.private_settings import PrivateCandidate, save_candidate
+from personalcontext.network.tls_vault import seal_passphrase
 from personalcontext.privacy.policy_store import PolicyDraft, load_policy, save_policy
 from personalcontext.sources.registry import create_source, set_source_pause
 from personalcontext.storage.backup import backup_database
@@ -42,6 +45,10 @@ def main():
             connection.commit()
             assert set_source_pause(connection, owner.token, owner.csrf, source.source_id, 1, False, 1005).status == "ok"
             connection.commit()
+            boundary = PrivateBoundary.create("192.168.7.2", "pc.example.test", 18443, ["192.168.7.0/24"])
+            candidate = PrivateCandidate(boundary, "cert.pem", "key.pem", seal_passphrase(b"synthetic-passphrase"))
+            assert save_candidate(connection, owner.token, owner.csrf, 0, candidate, 1005).status == "ok"
+            connection.commit()
             code = issue_pairing(connection, owner.token, owner.csrf, 1, 1005)
             connection.commit()
             draft = PolicyDraft(False, 600, frozenset({"synthetic-source"}), frozenset(),
@@ -61,6 +68,7 @@ def main():
             assert enroll(connection, code, 1007) is None
             connection.rollback()
             assert load_policy(connection).paused
+            assert connection.execute("SELECT count(*) FROM private_network_candidate").fetchone() == (0,)
             assert connection.execute("SELECT paused FROM sources WHERE source_id=?", (source.source_id,)).fetchone() == (1,)
             assert connection.execute("SELECT count(*) FROM security_audit WHERE event_type='restore'").fetchone()[0] == 1
         print("Frozen synthetic restore safety smoke passed")
