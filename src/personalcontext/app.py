@@ -13,6 +13,8 @@ from personalcontext.auth.owner_login import OwnerLogin
 from personalcontext.auth.password_executor import PasswordExecutor
 from personalcontext.contracts.health import HealthResponse, ReadinessResponse
 from personalcontext.demo.seed import DemoResponse, seed_demo
+from personalcontext.devices.device_http import router as device_access_router
+from personalcontext.devices.http_routes import router as device_router
 from personalcontext.jobs.scheduler import Scheduler
 from personalcontext.storage.initialize import initialize_database
 
@@ -45,6 +47,8 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.include_router(auth_router)
+    app.include_router(device_router)
+    app.include_router(device_access_router)
 
     @app.middleware("http")
     async def restrict_local_requests(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:

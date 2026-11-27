@@ -38,7 +38,7 @@ class AuthRateMigrationTests(unittest.TestCase):
                 connection.commit()
             initialize_database(path)
             with closing(sqlite3.connect(path)) as connection:
-                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0006")
+                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0007")
                 self.assertTrue(session_active(connection, session.token, now=1101))
                 self.assertEqual(connection.execute("SELECT count(*) FROM auth_attempts").fetchone()[0], 0)
             backups = list(path.parent.glob("context.db.*.dpapi"))

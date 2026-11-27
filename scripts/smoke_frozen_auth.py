@@ -37,10 +37,12 @@ def main():
         process = subprocess.Popen([str(executable)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         opener = build_opener(HTTPCookieProcessor(http.cookiejar.CookieJar()))
 
-        def post(path, value, csrf=None):
+        def post(path, value, csrf=None, bearer=None):
             headers = {"Origin": ORIGIN, "Content-Type": "application/json"}
             if csrf:
                 headers["X-CSRF-Token"] = csrf
+            if bearer:
+                headers["Authorization"] = f"Bearer {bearer}"
             request = Request(ORIGIN + path, data=json.dumps(value).encode(), headers=headers, method="POST")
             return opener.open(request, timeout=5)
 
@@ -63,6 +65,20 @@ def main():
                 assert json.load(response) == {"role": "owner"}
             with post("/api/v1/auth/csrf", {}) as response:
                 csrf = json.load(response)["csrf"]
+            with post("/api/v1/devices/pairing-codes", {"scopes": "heartbeat"}, csrf) as response:
+                pairing = json.load(response)["code"]
+            with post("/api/v1/devices/enroll", {"code": pairing}) as response:
+                device = json.load(response)
+            with post("/api/v1/device/heartbeat", {"device_id": device["device_id"]}, bearer=device["token"]) as response:
+                assert response.status == 204
+            with post("/api/v1/devices/" + device["device_id"] + "/revoke", {}, csrf) as response:
+                assert response.status == 204
+            try:
+                post("/api/v1/device/heartbeat", {"device_id": device["device_id"]}, bearer=device["token"])
+            except HTTPError as error:
+                assert error.code == 401
+            else:
+                raise AssertionError("Revoked device remains authorized")
             with post("/api/v1/auth/logout", {}, csrf) as response:
                 assert response.status == 204
             try:
