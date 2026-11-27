@@ -90,3 +90,12 @@ def revoke_session(connection: sqlite3.Connection, token: object) -> bool:
         return False
     connection.execute("BEGIN IMMEDIATE")
     return connection.execute("DELETE FROM owner_sessions WHERE token_hash=?", (digest,)).rowcount == 1
+
+
+def revoke_authorized_session(connection: sqlite3.Connection, token: object, csrf: object, now: int) -> bool:
+    connection.execute("BEGIN IMMEDIATE")
+    if not authorize_mutation(connection, token, csrf, now):
+        return False
+    digest = _digest(token)
+    assert digest is not None
+    return connection.execute("DELETE FROM owner_sessions WHERE token_hash=?", (digest,)).rowcount == 1
