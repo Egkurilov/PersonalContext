@@ -65,6 +65,11 @@ def main():
                 assert json.load(response) == {"role": "owner"}
             with post("/api/v1/auth/csrf", {}) as response:
                 csrf = json.load(response)["csrf"]
+            preview = {"kind": "web", "source": "example.org",
+                       "data": {"url": "https://example.org/article?tracking=synthetic"}}
+            with post("/api/v1/privacy/preview", preview, csrf) as response:
+                result = json.load(response)
+                assert result["preview_only"] is True and result["result"]["url"] == "https://example.org/article"
             draft = {"version": 1, "paused": False, "ttl": 600, "allowed": ["synthetic-source"],
                      "denied": [], "grants": [{"source": "synthetic-source", "scope": "metadata"}]}
             request = Request(ORIGIN + "/api/v1/privacy/policy", data=json.dumps(draft).encode(), method="PATCH",

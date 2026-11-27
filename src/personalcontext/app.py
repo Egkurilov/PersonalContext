@@ -17,6 +17,7 @@ from personalcontext.devices.device_http import router as device_access_router
 from personalcontext.devices.http_routes import router as device_router
 from personalcontext.jobs.scheduler import Scheduler
 from personalcontext.privacy.http_routes import router as privacy_router
+from personalcontext.privacy.preview_routes import router as preview_router
 from personalcontext.storage.initialize import initialize_database
 
 
@@ -51,6 +52,7 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
     app.include_router(device_router)
     app.include_router(device_access_router)
     app.include_router(privacy_router)
+    app.include_router(preview_router)
 
     @app.middleware("http")
     async def restrict_local_requests(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:

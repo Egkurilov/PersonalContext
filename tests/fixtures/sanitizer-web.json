@@ -1,0 +1,10 @@
+[
+  {"case": "public article", "url": "https://EXAMPLE.org:443/articles/python?tracking=discard#fragment", "expected": "https://example.org/articles/python"},
+  {"case": "idn article", "url": "https://пример.рф/статья", "domain": "xn--e1afmkfd.xn--p1ai", "expected": "https://xn--e1afmkfd.xn--p1ai/%D1%81%D1%82%D0%B0%D1%82%D1%8C%D1%8F"},
+  {"case": "unapproved domain", "url": "https://unknown.example/article", "expected": null},
+  {"case": "private browsing", "url": "https://example.org/article", "private": true, "expected": null},
+  {"case": "unknown private state", "url": "https://example.org/article", "private": null, "expected": null},
+  {"case": "encoded sensitive path", "url": "https://example.org/%256cogin", "expected": null},
+  {"case": "non-web scheme", "url": "file:///synthetic/example", "expected": null},
+  {"case": "encoded control", "url": "https://example.org/article/%0a", "expected": null}
+]
