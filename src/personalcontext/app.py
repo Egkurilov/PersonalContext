@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -33,6 +34,7 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
             await scheduler.stop()
             raise
         app.state.scheduler = scheduler
+        app.state.loop = asyncio.get_running_loop()
         app.state.ready = True
         try:
             yield
