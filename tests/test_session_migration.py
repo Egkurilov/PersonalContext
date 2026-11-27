@@ -36,7 +36,7 @@ class SessionMigrationTests(unittest.TestCase):
                 connection.commit()
             initialize_database(path)
             with closing(sqlite3.connect(path)) as connection:
-                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0005")
+                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0006")
                 self.assertTrue(verify_password(find_owner_hash(connection), candidate))
                 self.assertEqual(connection.execute("SELECT count(*) FROM owner_sessions").fetchone()[0], 0)
             backups = list(path.parent.glob("context.db.*.dpapi"))
