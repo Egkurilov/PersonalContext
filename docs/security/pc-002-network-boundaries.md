@@ -13,6 +13,15 @@ public networks, malformed/ambiguous addresses, unlisted peers, HTTP, foreign
 Host/Origin and forwarding headers are rejected. These checks are unit tested;
 they do not establish TLS or change firewall rules.
 
+An offline TLS helper loads a certificate and matching private key into a server
+context and performs a bounded in-memory TLS handshake against Python's default
+trust configuration. It requires certificate hostname verification via SAN and
+TLS 1.2 or newer; it accepts a key passphrase supplied by its caller. Synthetic
+tests cover trusted and untrusted certificates, hostname and key mismatches, and
+an encrypted test key. The helper does not open a socket. Python's default trust
+may depend on environment configuration, and the remote client's trust may differ.
+No certificate/key storage or owner-facing TLS configuration is implemented.
+
 Private access is not wired to a listener or settings and is not available yet.
 Before enabling it, implement and verify certificate identity and trust, private
 key protection, selected local interface binding, firewall restrictions, HTTPS
