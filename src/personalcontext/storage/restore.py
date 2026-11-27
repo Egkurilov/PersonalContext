@@ -4,6 +4,8 @@ import sqlite3
 from contextlib import closing
 from pathlib import Path
 
+from personalcontext.storage.restore_security import reset_restored_access
+
 
 def restore_backup(backup: Path, destination: Path) -> None:
     import win32crypt
@@ -15,6 +17,11 @@ def restore_backup(backup: Path, destination: Path) -> None:
         snapshot.deserialize(data)
         if snapshot.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
             raise sqlite3.DatabaseError("Backup integrity check failed")
+        reset_restored_access(snapshot)
+        snapshot.commit()
+        if snapshot.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+            raise sqlite3.DatabaseError("Restored snapshot integrity check failed")
+        data = snapshot.serialize()
     created = False
     try:
         with destination.open("xb") as output:

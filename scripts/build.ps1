@@ -13,6 +13,8 @@ try {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & .venv/Scripts/python scripts/smoke_frozen_auth.py
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & .venv/Scripts/python scripts/smoke_frozen_restore.py
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     $compiler = & "$PSScriptRoot/ensure_inno.ps1"
     & $compiler /Qp installer/PersonalContext.iss
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

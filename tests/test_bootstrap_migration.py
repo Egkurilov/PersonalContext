@@ -41,4 +41,4 @@ class BootstrapMigrationTests(unittest.TestCase):
             restore_backup(backups[0], restored)
             with closing(sqlite3.connect(restored)) as connection:
                 self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0003")
-                self.assertTrue(verify_password(find_owner_hash(connection), candidate))
+                self.assertIsNone(find_owner_hash(connection))

@@ -53,4 +53,4 @@ class PolicyMigrationTests(unittest.TestCase):
             restore_backup(backups[0], restored)
             with closing(sqlite3.connect(restored)) as connection:
                 self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0007")
-                self.assertTrue(authorize_device(connection, device.token, device.device_id, 1))
+                self.assertFalse(authorize_device(connection, device.token, device.device_id, 1))

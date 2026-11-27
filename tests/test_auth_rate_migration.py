@@ -47,4 +47,4 @@ class AuthRateMigrationTests(unittest.TestCase):
             restore_backup(backups[0], restored)
             with closing(sqlite3.connect(restored)) as connection:
                 self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0005")
-                self.assertTrue(session_active(connection, session.token, now=1101))
+                self.assertFalse(session_active(connection, session.token, now=1101))
