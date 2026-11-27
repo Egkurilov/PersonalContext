@@ -15,6 +15,7 @@ from personalcontext.auth.password_hash import hash_password
 from personalcontext.devices.pairing import enroll, issue_pairing
 from personalcontext.devices.scopes import authorize_device
 from personalcontext.privacy.policy_store import PolicyDraft, load_policy, save_policy
+from personalcontext.sources.registry import create_source, set_source_pause
 from personalcontext.storage.backup import backup_database
 from personalcontext.storage.initialize import initialize_database
 
@@ -36,6 +37,11 @@ def main():
             connection.commit()
             device = enroll(connection, code, 1004)
             connection.commit()
+            source = create_source(connection, owner.token, owner.csrf, device.device_id, "browser", 1004)
+            assert source.status == "ok"
+            connection.commit()
+            assert set_source_pause(connection, owner.token, owner.csrf, source.source_id, 1, False, 1005).status == "ok"
+            connection.commit()
             code = issue_pairing(connection, owner.token, owner.csrf, 1, 1005)
             connection.commit()
             draft = PolicyDraft(False, 600, frozenset({"synthetic-source"}), frozenset(),
@@ -55,6 +61,7 @@ def main():
             assert enroll(connection, code, 1007) is None
             connection.rollback()
             assert load_policy(connection).paused
+            assert connection.execute("SELECT paused FROM sources WHERE source_id=?", (source.source_id,)).fetchone() == (1,)
             assert connection.execute("SELECT count(*) FROM security_audit WHERE event_type='restore'").fetchone()[0] == 1
         print("Frozen synthetic restore safety smoke passed")
 
