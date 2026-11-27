@@ -59,9 +59,10 @@ def main():
                 assert response.status == 204
             with post("/api/v1/auth/login", {"password": CANDIDATE}) as response:
                 assert response.status == 200
-                csrf = json.load(response)["csrf"]
             with opener.open(ORIGIN + "/api/v1/auth/me", timeout=5) as response:
                 assert json.load(response) == {"role": "owner"}
+            with post("/api/v1/auth/csrf", {}) as response:
+                csrf = json.load(response)["csrf"]
             with post("/api/v1/auth/logout", {}, csrf) as response:
                 assert response.status == 204
             try:

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { OwnerAccess } from "./OwnerAccess";
 import "./style.css";
 
 type DemoData = { demo: true; items: string[] };
@@ -31,6 +32,7 @@ function App() {
       {demo && <p className="demo-label">DEMO · Синтетические данные</p>}
       <h1>Ваш контекст начинается здесь</h1>
       <p>Источники пока не подключены. Сбор активности выключен.</p>
+      <OwnerAccess />
       {demo && (
         <section>
           <h2>Примеры материалов</h2>

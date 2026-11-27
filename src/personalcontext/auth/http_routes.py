@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse, Response
 
 from personalcontext.auth.http_input import read_object
 from personalcontext.auth.owner_sessions import session_active
+from personalcontext.auth.session_csrf import rotate_csrf
 
 router = APIRouter(prefix="/api/v1/auth")
 _ORIGIN = "http://127.0.0.1:17890"
@@ -75,6 +76,19 @@ async def me(request: Request) -> Response:
     if not active:
         return error(401, "unauthorized")
     return JSONResponse({"role": "owner"}, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/csrf", response_model=None)
+async def csrf(request: Request) -> Response:
+    if not check_origin(request):
+        return error(403, "forbidden")
+    token = request.cookies.get(_COOKIE)
+    value = await request.app.state.scheduler.writer.submit(
+        lambda connection: rotate_csrf(connection, token=token, now=int(time.time())),
+    )
+    if value is None:
+        return error(401, "unauthorized")
+    return JSONResponse({"csrf": value}, headers={"Cache-Control": "no-store"})
 
 
 @router.post("/logout", response_model=None)

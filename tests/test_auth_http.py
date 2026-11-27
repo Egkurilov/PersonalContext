@@ -95,3 +95,18 @@ class AuthHttpTests(unittest.TestCase):
         response = self.client.get("/api/v1/auth/me", headers=[("Host", "127.0.0.1:17890"),
                                                                ("Host", "attacker.example")])
         self.assertEqual(response.status_code, 400)
+
+    def test_csrf_refresh_requires_origin_and_active_session(self):
+        self.assertEqual(self.post("/api/v1/auth/csrf", {}).status_code, 401)
+        self.assertEqual(self.bootstrap().status_code, 204)
+        old = self.login().json()["csrf"]
+        self.assertEqual(self.client.post("/api/v1/auth/csrf").status_code, 403)
+        refreshed = self.post("/api/v1/auth/csrf", {})
+        self.assertEqual(refreshed.status_code, 200)
+        self.assertEqual(refreshed.headers["cache-control"], "no-store")
+        current = refreshed.json()["csrf"]
+        if old == current:
+            self.fail("CSRF rotation reused a token")
+        self.assertEqual(self.post("/api/v1/auth/logout", {}, **{"X-CSRF-Token": old}).status_code, 403)
+        self.assertEqual(self.post("/api/v1/auth/logout", {}, **{"X-CSRF-Token": current}).status_code, 204)
+        self.assertEqual(self.post("/api/v1/auth/csrf", {}).status_code, 401)
