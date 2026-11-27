@@ -1,10 +1,10 @@
 import asyncio
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi import FastAPI
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from personalcontext.audit.http_routes import router as audit_router
@@ -13,12 +13,13 @@ from personalcontext.auth.http_routes import router as auth_router
 from personalcontext.auth.owner_bootstrap import OwnerBootstrap
 from personalcontext.auth.owner_login import OwnerLogin
 from personalcontext.auth.password_executor import PasswordExecutor
+from personalcontext.auth.rotation_http import router as rotation_router
 from personalcontext.contracts.health import HealthResponse, ReadinessResponse
 from personalcontext.demo.seed import DemoResponse, seed_demo
 from personalcontext.devices.device_http import router as device_access_router
 from personalcontext.devices.http_routes import router as device_router
 from personalcontext.jobs.scheduler import Scheduler
-from personalcontext.network.boundary import LocalBoundary, check_request
+from personalcontext.network.middleware import restrict_requests
 from personalcontext.privacy.http_routes import router as privacy_router
 from personalcontext.privacy.preview_routes import router as preview_router
 from personalcontext.privacy.runtime.latch import CaptureLatch
@@ -63,6 +64,7 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.include_router(auth_router)
+    app.include_router(rotation_router)
     app.include_router(audit_router)
     app.include_router(device_router)
     app.include_router(device_access_router)
@@ -71,16 +73,7 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
     app.include_router(config_router)
     app.include_router(sources_router)
 
-    @app.middleware("http")
-    async def restrict_local_requests(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
-        forwarding = [value for name in ("forwarded", "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host")
-                      for value in request.headers.getlist(name)]
-        peer = request.client.host if request.client else None
-        failure = check_request(LocalBoundary(), peer, request.url.scheme, request.headers.getlist("host"),
-                                request.headers.getlist("origin"), forwarding)
-        if failure is not None:
-            return JSONResponse({"detail": failure[1]}, status_code=failure[0])
-        return await call_next(request)
+    app.middleware("http")(restrict_requests)
 
     @app.get("/healthz")
     async def health() -> HealthResponse:

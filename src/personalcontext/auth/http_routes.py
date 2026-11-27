@@ -7,10 +7,14 @@ from fastapi.responses import JSONResponse, Response
 
 from personalcontext.auth.http_input import read_object
 from personalcontext.auth.owner_sessions import session_active
-from personalcontext.auth.session_csrf import rotate_csrf, rotate_session
+from personalcontext.auth.session_csrf import rotate_csrf
+from personalcontext.network.boundary import (
+    LocalBoundary,
+    PrivateBoundary,
+    expected_origin,
+)
 
 router = APIRouter(prefix="/api/v1/auth")
-_ORIGIN = "http://127.0.0.1:17890"
 _COOKIE = "pc_session"
 
 
@@ -22,7 +26,8 @@ def error(status: int, code: str, retry: int | None = None) -> JSONResponse:
 
 
 def check_origin(request: Request) -> bool:
-    return request.headers.getlist("origin") == [_ORIGIN]
+    boundary = request.scope.get("personalcontext.boundary", LocalBoundary())
+    return isinstance(boundary, (LocalBoundary, PrivateBoundary)) and request.headers.getlist("origin") == [expected_origin(boundary)]
 
 
 async def body_or_error(request: Request, fields: set[str]) -> dict[str, str] | Response:
@@ -45,6 +50,8 @@ def failure(status: str, retry: int | None) -> JSONResponse:
 
 @router.post("/bootstrap", response_model=None)
 async def bootstrap(request: Request) -> Response:
+    if isinstance(request.scope.get("personalcontext.boundary"), PrivateBoundary):
+        return error(403, "forbidden")
     body = await body_or_error(request, {"code", "password"})
     if isinstance(body, Response):
         return body
@@ -63,7 +70,8 @@ async def login(request: Request) -> Response:
     if result.status != "ok" or result.session is None:
         return failure(result.status, result.retry_after)
     response = JSONResponse({"csrf": result.session.csrf}, headers={"Cache-Control": "no-store"})
-    response.set_cookie(_COOKIE, result.session.token, max_age=1800, httponly=True, samesite="strict", path="/")
+    response.set_cookie(_COOKIE, result.session.token, max_age=1800, httponly=True, samesite="strict", path="/",
+                        secure=request.url.scheme == "https")
     return response
 
 
@@ -101,20 +109,5 @@ async def logout(request: Request) -> Response:
     if not revoked:
         return error(403, "forbidden")
     response = Response(status_code=204, headers={"Cache-Control": "no-store"})
-    response.delete_cookie(_COOKIE, path="/", httponly=True, samesite="strict")
-    return response
-
-
-@router.post("/rotate", response_model=None)
-async def rotate(request: Request) -> Response:
-    if not check_origin(request):
-        return error(403, "forbidden")
-    token, csrf_token = request.cookies.get(_COOKIE), request.headers.get("x-csrf-token")
-    value = await request.app.state.scheduler.writer.submit(
-        lambda connection: rotate_session(connection, token, csrf_token, int(time.time())),
-    )
-    if value is None:
-        return error(403, "forbidden")
-    response = JSONResponse({"csrf": value.csrf}, headers={"Cache-Control": "no-store"})
-    response.set_cookie(_COOKIE, value.token, max_age=1800, httponly=True, samesite="strict", path="/")
+    response.delete_cookie(_COOKIE, path="/", httponly=True, samesite="strict", secure=request.url.scheme == "https")
     return response

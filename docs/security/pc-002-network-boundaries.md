@@ -13,6 +13,14 @@ public networks, malformed/ambiguous addresses, unlisted peers, HTTP, foreign
 Host/Origin and forwarding headers are rejected. These checks are unit tested;
 they do not establish TLS or change firewall rules.
 
+An internal ASGI transport wrapper can attach the server-selected private
+boundary to the shared application; request headers cannot select it. Under
+that boundary owner mutations require the matching HTTPS Origin and owner
+cookies carry `Secure`, `HttpOnly` and `SameSite=Strict`. Bootstrap completion
+is still local only. ASGI tests cover remote login, rotation, Origin, rejected
+peers and plaintext. They simulate transport scope and do not prove a real TLS
+listener, peer network, firewall or browser installation.
+
 An offline TLS helper loads a certificate and matching private key into a server
 context and performs a bounded in-memory TLS handshake against Python's default
 trust configuration. It requires certificate hostname verification via SAN and

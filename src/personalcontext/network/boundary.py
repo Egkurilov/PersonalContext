@@ -45,12 +45,17 @@ class PrivateBoundary:
         return cls(address, hostname, port, tuple(peers))
 
 
+def expected_origin(boundary: LocalBoundary | PrivateBoundary) -> str:
+    if isinstance(boundary, PrivateBoundary):
+        return f"https://{boundary.hostname}:{boundary.port}"
+    return "http://127.0.0.1:17890"
+
+
 def check_request(boundary: LocalBoundary | PrivateBoundary, peer: str | None, scheme: str,
                   hosts: list[str], origins: list[str], forwarding: list[str]) -> tuple[int, str] | None:
     if isinstance(boundary, LocalBoundary):
         valid_peer = peer == "127.0.0.1" and scheme == "http"
         valid_hosts = {"127.0.0.1", "127.0.0.1:17890"}
-        origin = "http://127.0.0.1:17890"
     elif isinstance(boundary, PrivateBoundary):
         try:
             address = ipaddress.ip_address(peer or "")
@@ -58,7 +63,6 @@ def check_request(boundary: LocalBoundary | PrivateBoundary, peer: str | None, s
         except ValueError:
             valid_peer = False
         valid_hosts = {f"{boundary.hostname}:{boundary.port}"}
-        origin = f"https://{boundary.hostname}:{boundary.port}"
     else:
         return (403, "Forbidden")
     if not valid_peer:
@@ -67,6 +71,6 @@ def check_request(boundary: LocalBoundary | PrivateBoundary, peer: str | None, s
         return (400, "Invalid forwarding headers")
     if len(hosts) != 1 or hosts[0] not in valid_hosts:
         return (400, "Invalid host")
-    if len(origins) > 1 or (origins and origins[0] != origin):
+    if len(origins) > 1 or (origins and origins[0] != expected_origin(boundary)):
         return (403, "Invalid origin")
     return None
