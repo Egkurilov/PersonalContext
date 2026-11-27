@@ -18,6 +18,12 @@ async def submit_capture[T](writer: Writer, latch: CaptureLatch, operation: Call
         if not latch.allows(ticket):
             return None
         connection.execute("BEGIN IMMEDIATE")
+        allowed = validate(connection)
+        if not connection.in_transaction:
+            raise RuntimeError("Capture transaction required")
+        if allowed is not True or writer.safety_failed.is_set() or not latch.allows(ticket):
+            connection.rollback()
+            return None
         result = operation(connection)
         if result is None:
             if connection.in_transaction:

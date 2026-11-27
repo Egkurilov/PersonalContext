@@ -87,12 +87,17 @@ class CaptureCommitTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_pause_during_final_validation_waits_for_rollback(self):
         entered, release = threading.Event(), threading.Event()
+        checks = 0
 
         def operation(connection):
             connection.execute("INSERT INTO app_metadata(key,value) VALUES ('fixture','synthetic')")
             return True
 
         def validate(_connection):
+            nonlocal checks
+            checks += 1
+            if checks == 1:
+                return True
             entered.set()
             release.wait(timeout=3)
             return True

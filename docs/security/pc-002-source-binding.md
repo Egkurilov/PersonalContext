@@ -20,6 +20,10 @@ settings describe owner intent, not evidence of private-mode detection, OS
 permission, or a trustworthy collector. The identity check alone is not an
 ingestion authorization. No real activity collection is enabled by this change.
 
+The transaction helper additionally combines device scope and binding, source
+pause and the owner policy at both sides of a guarded synthetic operation. It
+does not establish a collector's capabilities and is not an ingestion endpoint.
+
 Migration 0010 preserves existing audit rows and creates the source registry.
 Alembic migrations run within an explicit SQLite `BEGIN IMMEDIATE` transaction;
 failure during the audit-table rebuild rolls back the schema, records and version
