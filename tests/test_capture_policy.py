@@ -16,7 +16,7 @@ class CapturePolicyTests(unittest.TestCase):
             version=7, issued_at=self.now - timedelta(minutes=1),
             expires_at=self.now + timedelta(hours=1), paused=False,
             allowed_sources=frozenset({"synthetic-source"}),
-            scopes=frozenset({"metadata"}),
+            grants=frozenset({("synthetic-source", "metadata")}),
         )
         self.request = CaptureRequest(
             source="synthetic-source", scope="metadata", policy_version=7,
@@ -34,7 +34,7 @@ class CapturePolicyTests(unittest.TestCase):
             replace(self.policy, issued_at=self.now + timedelta(seconds=1)),
             replace(self.policy, denied_sources=frozenset({"synthetic-source"})),
             replace(self.policy, allowed_sources=frozenset()),
-            replace(self.policy, scopes=frozenset()),
+            replace(self.policy, grants=frozenset()),
         )
         for policy in variants:
             with self.subTest(policy=policy):
@@ -57,8 +57,20 @@ class CapturePolicyTests(unittest.TestCase):
         self.assertFalse(allows_capture(self.policy, replace(self.request, private=0), self.now))
         self.assertFalse(allows_capture(self.policy, replace(self.request, scope=[]), self.now))
         self.assertFalse(allows_capture(replace(self.policy, allowed_sources=[]), self.request, self.now))
+        self.assertFalse(allows_capture(replace(self.policy, grants=frozenset({("synthetic-source",)})), self.request, self.now))
+        self.assertFalse(allows_capture(replace(self.policy, grants=frozenset({("synthetic-source", "invalid")})), self.request, self.now))
         self.assertFalse(allows_capture(self.policy, self.request, self.now.replace(tzinfo=None)))
         self.assertFalse(allows_capture(replace(self.policy, expires_at=self.now.replace(tzinfo=None)), self.request, self.now))
+
+    def test_scope_grant_is_bound_to_its_source(self):
+        policy = replace(
+            self.policy,
+            allowed_sources=frozenset({"synthetic-source", "other-source"}),
+            grants=frozenset({("synthetic-source", "metadata"), ("other-source", "ocr")}),
+        )
+        self.assertFalse(allows_capture(policy, replace(self.request, scope="ocr"), self.now))
+        self.assertFalse(allows_capture(policy, replace(self.request, source="other-source"), self.now))
+        self.assertTrue(allows_capture(policy, replace(self.request, source="other-source", scope="ocr"), self.now))
 
     def test_expiry_compares_instants_across_repeated_local_hour(self):
         class RepeatedHour(tzinfo):

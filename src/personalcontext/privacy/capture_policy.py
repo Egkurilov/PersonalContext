@@ -14,7 +14,7 @@ class CapturePolicy:
     paused: bool = True
     allowed_sources: frozenset[str] = frozenset()
     denied_sources: frozenset[str] = frozenset()
-    scopes: frozenset[str] = frozenset()
+    grants: frozenset[tuple[str, str]] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -35,6 +35,11 @@ def _aware(value: object) -> bool:
     return isinstance(value, datetime) and value.tzinfo is not None and value.utcoffset() is not None
 
 
+def _valid_grant(value: object) -> bool:
+    return (isinstance(value, tuple) and len(value) == 2 and _valid_source(value[0])
+            and isinstance(value[1], str) and value[1] in _SCOPES)
+
+
 def allows_capture(policy: CapturePolicy, request: CaptureRequest, now: datetime) -> bool:
     """Check a known classification and explicit source/scope grant; unknowns deny."""
     if not isinstance(policy, CapturePolicy) or not isinstance(request, CaptureRequest):
@@ -46,9 +51,9 @@ def allows_capture(policy: CapturePolicy, request: CaptureRequest, now: datetime
             or not isinstance(request.scope, str)):
         return False
     if (not isinstance(policy.allowed_sources, frozenset) or not isinstance(policy.denied_sources, frozenset)
-            or not isinstance(policy.scopes, frozenset) or not all(map(_valid_source, policy.allowed_sources))
-            or not all(map(_valid_source, policy.denied_sources)) or not policy.scopes <= _SCOPES
-            or request.scope not in _SCOPES or request.scope not in policy.scopes
+            or not isinstance(policy.grants, frozenset) or not all(map(_valid_source, policy.allowed_sources))
+            or not all(map(_valid_source, policy.denied_sources)) or not all(map(_valid_grant, policy.grants))
+            or request.scope not in _SCOPES or (request.source, request.scope) not in policy.grants
             or request.source not in policy.allowed_sources or request.source in policy.denied_sources):
         return False
     try:
