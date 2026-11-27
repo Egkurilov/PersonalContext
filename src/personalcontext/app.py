@@ -6,6 +6,10 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+from personalcontext.auth.http_routes import router as auth_router
+from personalcontext.auth.owner_bootstrap import OwnerBootstrap
+from personalcontext.auth.owner_login import OwnerLogin
+from personalcontext.auth.password_executor import PasswordExecutor
 from personalcontext.contracts.health import HealthResponse, ReadinessResponse
 from personalcontext.demo.seed import DemoResponse, seed_demo
 from personalcontext.jobs.scheduler import Scheduler
@@ -19,9 +23,13 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
         if demo:
             app.state.demo_response = seed_demo(database_path)
         scheduler = Scheduler(database_path, {})
+        executor = PasswordExecutor()
         try:
             await scheduler.start()
+            app.state.owner_login = await OwnerLogin.create(scheduler.writer, executor)
+            app.state.owner_bootstrap = OwnerBootstrap(scheduler.writer, executor)
         except BaseException:
+            await executor.close()
             await scheduler.stop()
             raise
         app.state.scheduler = scheduler
@@ -30,18 +38,21 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
             yield
         finally:
             app.state.ready = False
+            await executor.close()
             await scheduler.stop()
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app.include_router(auth_router)
 
     @app.middleware("http")
     async def restrict_local_requests(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
-        if request.client is None or request.client.host != "127.0.0.1":
+        if request.client is None or request.client.host != "127.0.0.1" or request.url.scheme != "http":
             return JSONResponse({"detail": "Forbidden"}, status_code=403)
-        if request.headers.get("host") not in {"127.0.0.1:17890", "127.0.0.1"}:
+        hosts = request.headers.getlist("host")
+        if len(hosts) != 1 or hosts[0] not in {"127.0.0.1:17890", "127.0.0.1"}:
             return JSONResponse({"detail": "Invalid host"}, status_code=400)
-        origin = request.headers.get("origin")
-        if origin is not None and origin != "http://127.0.0.1:17890":
+        origins = request.headers.getlist("origin")
+        if len(origins) > 1 or (origins and origins[0] != "http://127.0.0.1:17890"):
             return JSONResponse({"detail": "Invalid origin"}, status_code=403)
         return await call_next(request)
 
