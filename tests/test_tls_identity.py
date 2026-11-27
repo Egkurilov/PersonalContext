@@ -2,12 +2,14 @@ import os
 import shutil
 import ssl
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from personalcontext.network.tls import trusted_server_context
+from personalcontext.network.tls import trusted_server_context, vault_server_context
+from personalcontext.network.tls_vault import seal_passphrase
 
 
 def openssl_path():
@@ -70,3 +72,14 @@ class TlsIdentityTests(unittest.TestCase):
                     side_effect=lambda: create_default(cafile=str(self.no_san))),
               self.assertRaisesRegex(ValueError, "TLS configuration unavailable")):
             trusted_server_context(self.no_san, self.key, "pc.example.test")
+
+    @unittest.skipUnless(sys.platform == "win32", "Windows DPAPI is required")
+    def test_user_bound_passphrase_opens_encrypted_key_for_tls(self):
+        sealed = seal_passphrase(b"synthetic-test-passphrase")
+        create_default = ssl.create_default_context
+        with patch("personalcontext.network.tls.ssl.create_default_context",
+                   side_effect=lambda: create_default(cafile=str(self.cert))):
+            context = vault_server_context(self.cert, self.encrypted, "pc.example.test", sealed)
+            with self.assertRaisesRegex(ValueError, "TLS configuration unavailable"):
+                vault_server_context(self.cert, self.key, "pc.example.test", sealed)
+        self.assertEqual(context.minimum_version, ssl.TLSVersion.TLSv1_2)

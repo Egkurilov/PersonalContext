@@ -20,7 +20,13 @@ TLS 1.2 or newer; it accepts a key passphrase supplied by its caller. Synthetic
 tests cover trusted and untrusted certificates, hostname and key mismatches, and
 an encrypted test key. The helper does not open a socket. Python's default trust
 may depend on environment configuration, and the remote client's trust may differ.
-No certificate/key storage or owner-facing TLS configuration is implemented.
+The Windows-only TLS vault helper uses user-bound DPAPI with a dedicated purpose
+and no UI to protect the key passphrase; its loader accepts encrypted PKCS#8 PEM
+keys and supplies the recovered passphrase to the offline verifier. Real DPAPI
+round-trip, tampering and encrypted synthetic-key tests run on Windows. This is
+not protection against malware running as the same user; Python cannot guarantee
+erasure of a passphrase from process memory. Storage, file ACL and path checks,
+owner-facing TLS configuration and listener integration are not implemented.
 
 Private access is not wired to a listener or settings and is not available yet.
 Before enabling it, implement and verify certificate identity and trust, private

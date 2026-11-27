@@ -3,6 +3,8 @@
 import ssl
 from pathlib import Path
 
+from personalcontext.network.tls_vault import open_passphrase
+
 
 def _handshake(server: ssl.SSLContext, client: ssl.SSLContext, hostname: str) -> None:
     if client.verify_mode != ssl.CERT_REQUIRED or not client.check_hostname:
@@ -46,3 +48,14 @@ def trusted_server_context(cert: Path, key: Path, hostname: str, password: bytes
         return server
     except (ssl.SSLError, OSError, ValueError, TypeError):
         raise ValueError("TLS configuration unavailable") from None
+
+
+def vault_server_context(cert: Path, key: Path, hostname: str, protected: bytes) -> ssl.SSLContext:
+    """Open a user-bound passphrase only for loading the encrypted TLS key."""
+    try:
+        with key.open("rb") as source:
+            if source.readline(80).strip() != b"-----BEGIN ENCRYPTED PRIVATE KEY-----":
+                raise ValueError("Invalid encrypted key")
+    except (OSError, ValueError):
+        raise ValueError("TLS configuration unavailable") from None
+    return trusted_server_context(cert, key, hostname, open_passphrase(protected))
