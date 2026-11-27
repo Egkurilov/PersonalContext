@@ -21,6 +21,17 @@ is still local only. ASGI tests cover remote login, rotation, Origin, rejected
 peers and plaintext. They simulate transport scope and do not prove a real TLS
 listener, peer network, firewall or browser installation.
 
+An internal Uvicorn configuration builds a verified TLS 1.2+ server context
+from the certificate, encrypted key and DPAPI-protected passphrase, joins it to
+the scoped transport, disables proxy headers and request access logs, and
+leaves the shared application's lifecycle to its existing event loop. It does
+not bind or start a socket. A synthetic test runs it on loopback: a real TLS
+connection with a synthetic certificate succeeds cryptographically but is denied as an unlisted peer even
+with a forged forwarding header; plaintext HTTP is not accepted. This is not a
+LAN acceptance test. Before any actual start the caller must validate the
+effective firewall, bind the selected interface and arrange
+safe lifecycle and failure handling.
+
 An offline TLS helper loads a certificate and matching private key into a server
 context and performs a bounded in-memory TLS handshake against Python's default
 trust configuration. It requires certificate hostname verification via SAN and
@@ -37,7 +48,7 @@ erasure of a passphrase from process memory. Storage, file ACL and path checks,
 owner-facing TLS configuration and listener integration are not implemented.
 
 Private access is not wired to a listener or settings and is not available yet.
-Before enabling it, implement and verify certificate identity and trust, private
-key protection, selected local interface binding, firewall restrictions, HTTPS
+Before enabling it, implement and verify certificate and key storage, client
+trust, selected local interface binding, firewall restrictions, HTTPS
 session cookies, owner opt-in, lifecycle and real LAN/VPN negative tests. Never
 use this request filter as a substitute for TLS, firewall or authentication.
