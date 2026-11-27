@@ -70,8 +70,12 @@ def main() -> int:
             icon.stop()
 
         watcher = threading.Thread(target=watch_shutdown, daemon=True)
+        def setup_tray(tray: pystray.Icon) -> None:
+            tray.visible = True
+            watcher.start()
+
         try:
-            icon.run(setup=lambda _icon: watcher.start())
+            icon.run(setup=setup_tray)
         finally:
             win32event.SetEvent(stop_event)
             if watcher.is_alive():
