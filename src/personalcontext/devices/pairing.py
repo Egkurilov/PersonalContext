@@ -7,6 +7,7 @@ import sqlite3
 import uuid
 from dataclasses import dataclass, field
 
+from personalcontext.audit.record import record_audit
 from personalcontext.auth.owner_sessions import authorize_mutation
 from personalcontext.auth.owner_store import find_owner_hash
 from personalcontext.auth.password_hash import is_supported_hash
@@ -38,6 +39,7 @@ def issue_pairing(connection: sqlite3.Connection, token: object, csrf: object, m
     connection.execute("INSERT INTO pairing_codes VALUES (?,?,?,?,?)", (
         digest_token(code), hashlib.sha256(owner.encode("ascii")).digest(), mask, now, now + 300,
     ))
+    record_audit(connection, "pairing_issue", "owner", now)
     return code
 
 
@@ -63,6 +65,7 @@ def enroll(connection: sqlite3.Connection, code: object, now: int) -> DeviceCred
     connection.execute("INSERT INTO devices(device_id,token_hash,scope_mask,created_at) VALUES (?,?,?,?)",
                        (device_id, digest_token(token), mask, now))
     connection.execute("DELETE FROM pairing_codes WHERE code_hash=?", (digest,))
+    record_audit(connection, "device_enroll", "device", now)
     return DeviceCredential(device_id, token)
 
 
@@ -72,7 +75,10 @@ def revoke_device(connection: sqlite3.Connection, token: object, csrf: object, d
     connection.execute("BEGIN IMMEDIATE")
     if not authorize_mutation(connection, token, csrf, now):
         return False
-    return connection.execute(
+    revoked = connection.execute(
         "UPDATE devices SET revoked_at=? WHERE device_id=? AND revoked_at IS NULL AND created_at <= ?",
         (now, device_id, now),
     ).rowcount == 1
+    if revoked:
+        record_audit(connection, "device_revoke", "owner", now)
+    return revoked

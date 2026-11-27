@@ -7,6 +7,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+from personalcontext.audit.http_routes import router as audit_router
+from personalcontext.audit.retention import AuditHousekeeping
 from personalcontext.auth.http_routes import router as auth_router
 from personalcontext.auth.owner_bootstrap import OwnerBootstrap
 from personalcontext.auth.owner_login import OwnerLogin
@@ -29,26 +31,32 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
             app.state.demo_response = seed_demo(database_path)
         scheduler = Scheduler(database_path, {})
         executor = PasswordExecutor()
+        audit_housekeeping = AuditHousekeeping(scheduler.writer)
         try:
             await scheduler.start()
+            await audit_housekeeping.start()
             app.state.owner_login = await OwnerLogin.create(scheduler.writer, executor)
             app.state.owner_bootstrap = OwnerBootstrap(scheduler.writer, executor)
         except BaseException:
+            await audit_housekeeping.stop()
             await executor.close()
             await scheduler.stop()
             raise
         app.state.scheduler = scheduler
+        app.state.audit_housekeeping = audit_housekeeping
         app.state.loop = asyncio.get_running_loop()
         app.state.ready = True
         try:
             yield
         finally:
             app.state.ready = False
+            await audit_housekeeping.stop()
             await executor.close()
             await scheduler.stop()
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.include_router(auth_router)
+    app.include_router(audit_router)
     app.include_router(device_router)
     app.include_router(device_access_router)
     app.include_router(privacy_router)
@@ -72,7 +80,8 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
 
     @app.get("/readyz", response_model=None)
     async def ready() -> ReadinessResponse | JSONResponse:
-        if not getattr(app.state, "ready", False) or app.state.scheduler.task.done():
+        if (not getattr(app.state, "ready", False) or app.state.scheduler.task.done()
+                or app.state.audit_housekeeping.task.done()):
             return JSONResponse(ReadinessResponse(status="unavailable").model_dump(), status_code=503)
         return ReadinessResponse(status="ready")
 

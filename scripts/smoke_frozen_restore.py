@@ -55,6 +55,7 @@ def main():
             assert enroll(connection, code, 1007) is None
             connection.rollback()
             assert load_policy(connection).paused
+            assert connection.execute("SELECT count(*) FROM security_audit WHERE event_type='restore'").fetchone()[0] == 1
         print("Frozen synthetic restore safety smoke passed")
 
 

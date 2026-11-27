@@ -60,6 +60,7 @@ class RestoreSecurityTests(unittest.TestCase):
                 self.assertIsNone(enroll(connection, pending, 1007))
                 connection.rollback()
                 self.assertTrue(load_policy(connection).paused)
+                self.assertEqual(connection.execute("SELECT count(*) FROM security_audit WHERE event_type='restore'").fetchone()[0], 1)
                 replacement_code = issue_bootstrap(connection, 1010)
                 connection.commit()
                 replacement_hash = hash_password("synthetic replacement owner")

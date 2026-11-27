@@ -6,6 +6,7 @@ import time
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
 
+from personalcontext.audit.record import record_denied
 from personalcontext.auth.http_input import read_object
 from personalcontext.auth.http_routes import body_or_error, check_origin, error
 from personalcontext.auth.owner_sessions import session_active
@@ -54,6 +55,7 @@ async def device_enroll(request: Request) -> Response:
         return error(429, "rate_limited", decision.retry_after)
     device = await writer.submit(lambda connection: enroll(connection, body["code"], now=int(time.time())))
     if device is None:
+        await writer.submit(lambda connection: record_denied(connection, "device_enroll", "anonymous", int(time.time())))
         return error(401, "invalid_credentials")
     return JSONResponse({"device_id": device.device_id, "token": device.token}, headers={"Cache-Control": "no-store"})
 

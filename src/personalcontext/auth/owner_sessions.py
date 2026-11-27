@@ -7,6 +7,7 @@ import secrets
 import sqlite3
 from dataclasses import dataclass, field
 
+from personalcontext.audit.record import record_audit
 from personalcontext.auth.owner_store import find_owner_hash
 from personalcontext.auth.password_hash import is_supported_hash
 
@@ -47,6 +48,7 @@ def create_session(connection: sqlite3.Connection, expected_hash: str, now: int)
         "INSERT INTO owner_sessions(token_hash,csrf_hash,credential_hash,issued_at,expires_at) VALUES (?,?,?,?,?)",
         (_digest(token), _digest(csrf), hashlib.sha256(expected_hash.encode("ascii")).digest(), now, now + _LIFETIME),
     )
+    record_audit(connection, "owner_login", "owner", now)
     return SessionSecrets(token=token, csrf=csrf)
 
 
@@ -98,4 +100,7 @@ def revoke_authorized_session(connection: sqlite3.Connection, token: object, csr
         return False
     digest = _digest(token)
     assert digest is not None
-    return connection.execute("DELETE FROM owner_sessions WHERE token_hash=?", (digest,)).rowcount == 1
+    deleted = connection.execute("DELETE FROM owner_sessions WHERE token_hash=?", (digest,)).rowcount == 1
+    if deleted:
+        record_audit(connection, "owner_logout", "owner", now)
+    return deleted

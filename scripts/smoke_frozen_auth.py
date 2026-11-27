@@ -94,6 +94,9 @@ def main():
                 assert error.code == 401
             else:
                 raise AssertionError("Revoked device remains authorized")
+            with opener.open(ORIGIN + "/api/v1/audit", timeout=5) as response:
+                audit = response.read()
+                assert b'"device_revoke"' in audit and device["token"].encode() not in audit
             with post("/api/v1/auth/logout", {}, csrf) as response:
                 assert response.status == 204
             try:

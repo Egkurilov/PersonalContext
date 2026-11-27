@@ -6,6 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Literal
 
+from personalcontext.audit.record import record_denied
 from personalcontext.auth.owner_sessions import (
     SessionSecrets,
     create_session,
@@ -54,6 +55,7 @@ class OwnerLogin:
         except RuntimeError:
             return LoginResult("unavailable")
         if not valid_hash or stored is None or not matched:
+            await self._writer.submit(lambda connection: record_denied(connection, "owner_login", "anonymous", clock()))
             return LoginResult("invalid")
         session = await self._writer.submit(lambda connection: create_session(connection, expected_hash=stored, now=clock()))
         return LoginResult("ok", session=session) if session is not None else LoginResult("unavailable")

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Literal
 
+from personalcontext.audit.record import record_audit
 from personalcontext.auth.owner_sessions import authorize_mutation
 from personalcontext.privacy.capture_policy import CapturePolicy
 from personalcontext.privacy.policy_validation import MAX_TIME, PolicyDraft, valid_draft
@@ -66,4 +67,5 @@ def save_policy(connection: sqlite3.Connection, token: object, csrf: object, exp
                            [(source, disposition) for disposition, values in (("allow", draft.allowed), ("deny", draft.denied))
                             for source in values])
     connection.executemany("INSERT INTO capture_policy_grants VALUES (?,?)", list(draft.grants))
+    record_audit(connection, "policy_update", "owner", now)
     return PolicyResult("ok", version)

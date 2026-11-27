@@ -6,6 +6,7 @@ import re
 import secrets
 import sqlite3
 
+from personalcontext.audit.record import record_audit
 from personalcontext.auth.owner_store import (
     find_owner_hash,
     insert_owner_hash_in_transaction,
@@ -63,4 +64,6 @@ def consume_bootstrap(connection: sqlite3.Connection, candidate: object, encoded
         return False
     created = insert_owner_hash_in_transaction(connection, encoded)
     connection.execute("DELETE FROM bootstrap_codes WHERE singleton=1")
+    if created:
+        record_audit(connection, "owner_bootstrap", "system", now)
     return created

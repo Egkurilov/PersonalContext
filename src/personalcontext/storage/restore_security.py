@@ -1,11 +1,14 @@
 """Prevent restored backups from reviving old grants or access credentials."""
 
 import sqlite3
+import time
 
-_REVISIONS = {f"{number:04d}": number for number in range(1, 9)}
+from personalcontext.audit.record import record_audit
+
+_REVISIONS = {f"{number:04d}": number for number in range(1, 10)}
 _TABLES = {"owner_credentials": 3, "bootstrap_codes": 4, "owner_sessions": 5,
            "auth_rate_clocks": 6, "auth_attempts": 6, "pairing_codes": 7, "devices": 7,
-           "capture_policy": 8, "capture_policy_sources": 8, "capture_policy_grants": 8}
+           "capture_policy": 8, "capture_policy_sources": 8, "capture_policy_grants": 8, "security_audit": 9}
 
 
 def reset_restored_access(connection: sqlite3.Connection) -> None:
@@ -36,3 +39,5 @@ def reset_restored_access(connection: sqlite3.Connection) -> None:
             "version=CASE WHEN typeof(version)='integer' AND version BETWEEN 1 AND ? "
             "THEN version+1 ELSE 1 END WHERE singleton=1", (2**53 - 2,),
         )
+    if revision >= 9:
+        record_audit(connection, "restore", "system", int(time.time()))
