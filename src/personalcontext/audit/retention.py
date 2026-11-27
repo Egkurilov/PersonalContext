@@ -19,12 +19,15 @@ def prune_audit(connection: sqlite3.Connection, now: int) -> int:
 
 
 class AuditHousekeeping:
-    def __init__(self, writer: Writer, *, clock: Callable[[], int] | None = None, interval: float = 3600) -> None:
+    def __init__(self, writer: Writer, *, clock: Callable[[], int] | None = None, interval: float = 3600,
+                 on_failure: Callable[[], None] | None = None) -> None:
         if type(interval) not in (int, float) or not math.isfinite(interval) or interval <= 0:
             raise ValueError("Invalid audit interval")
         self.writer = writer
         self.clock = clock or (lambda: int(time.time()))
         self.interval = interval
+        self.on_failure = on_failure
+        self.stopping = False
         self.task: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
@@ -32,12 +35,17 @@ class AuditHousekeeping:
         self.task = asyncio.create_task(self._run(), name="audit-retention")
 
     async def _run(self) -> None:
-        while True:
-            await asyncio.sleep(self.interval)
-            await self.writer.submit(lambda connection: prune_audit(connection, self.clock()))
+        try:
+            while True:
+                await asyncio.sleep(self.interval)
+                await self.writer.submit(lambda connection: prune_audit(connection, self.clock()))
+        finally:
+            if not self.stopping and self.on_failure is not None:
+                self.on_failure()
 
     async def stop(self) -> None:
         if self.task is not None:
+            self.stopping = True
             self.task.cancel()
             with suppress(asyncio.CancelledError, Exception):
                 await self.task

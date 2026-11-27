@@ -75,11 +75,13 @@ def main():
             request = Request(ORIGIN + "/api/v1/privacy/policy", data=json.dumps(draft).encode(), method="PATCH",
                               headers={"Origin": ORIGIN, "Content-Type": "application/json", "X-CSRF-Token": csrf})
             with opener.open(request, timeout=5) as response:
-                assert json.load(response)["version"] == 2
+                result = json.load(response)
+                assert result["version"] == 2 and result["local_paused"] is False
             with post("/api/v1/privacy/pause", {}, csrf) as response:
                 assert response.status == 204
             with opener.open(ORIGIN + "/api/v1/privacy/policy", timeout=5) as response:
-                assert json.load(response)["paused"] is True
+                result = json.load(response)
+                assert result["paused"] is True and result["local_paused"] is True
             with post("/api/v1/devices/pairing-codes", {"scopes": "heartbeat"}, csrf) as response:
                 pairing = json.load(response)["code"]
             with post("/api/v1/devices/enroll", {"code": pairing}) as response:

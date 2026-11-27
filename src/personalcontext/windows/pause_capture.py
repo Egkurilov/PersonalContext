@@ -15,17 +15,22 @@ class PauseCapture:
 
     def open(self) -> None:
         if self._lock.acquire(blocking=False):
+            self._app.state.capture_latch.pause()
             try:
                 threading.Thread(target=self._run, name="capture-pause", daemon=True).start()
             except BaseException:
                 self._lock.release()
                 raise
+        elif not self._app.state.capture_latch.is_paused():
+            self._app.state.capture_latch.pause()
 
     def _run(self) -> None:
         import win32api
         import win32con
 
         try:
+            if not self._app.state.capture_latch.drain(10):
+                raise RuntimeError("Pause pending")
             operation = self._app.state.scheduler.writer.submit(
                 lambda connection: pause_local(connection, now=int(time.time())),
             )
@@ -41,7 +46,8 @@ class PauseCapture:
                        "Возобновление требует нового разрешения.")
             flags = win32con.MB_ICONINFORMATION
         except Exception:  # noqa: BLE001 - do not disclose details from the database or runtime
-            message = "Не удалось подтвердить паузу. Проверьте состояние приложения."
+            message = ("Локальная пауза включена, но не удалось сохранить её в базе. "
+                       "После перезапуска локальный сбор останется на паузе. Проверьте состояние приложения.")
             flags = win32con.MB_ICONERROR
         finally:
             self._lock.release()

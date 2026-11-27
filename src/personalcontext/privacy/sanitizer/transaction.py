@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 
 from personalcontext.privacy.capture_policy import CaptureRequest, allows_capture
 from personalcontext.privacy.policy_store import load_policy
+from personalcontext.privacy.runtime.latch import CaptureLatch
 from personalcontext.privacy.sanitizer.app import SanitizedApp
 from personalcontext.privacy.sanitizer.gate import gate_app, gate_text, gate_web
 from personalcontext.privacy.sanitizer.rules import SanitizerContext
@@ -13,27 +14,42 @@ from personalcontext.privacy.sanitizer.web import SanitizedWeb
 
 
 def prepare_web(connection: sqlite3.Connection, request: CaptureRequest, context: SanitizerContext,
-                value: object, *, clock: Callable[[], datetime] | None = None) -> SanitizedWeb | None:
-    connection.execute("BEGIN IMMEDIATE")
+                value: object, *, latch: CaptureLatch, clock: Callable[[], datetime] | None = None) -> SanitizedWeb | None:
+    ticket = latch.ticket()
+    if ticket is None:
+        return None
+    if not connection.in_transaction:
+        connection.execute("BEGIN IMMEDIATE")
     policy = load_policy(connection)
     get_time = clock or (lambda: datetime.now(UTC))
     result = gate_web(policy, request, context, value, get_time()) if policy is not None else None
-    return result if policy is not None and result is not None and allows_capture(policy, request, get_time()) else None
+    return result if (policy is not None and result is not None and allows_capture(policy, request, get_time())
+                      and latch.allows(ticket)) else None
 
 
 def prepare_app(connection: sqlite3.Connection, request: CaptureRequest, context: SanitizerContext,
-                value: object, *, clock: Callable[[], datetime] | None = None) -> SanitizedApp | None:
-    connection.execute("BEGIN IMMEDIATE")
+                value: object, *, latch: CaptureLatch, clock: Callable[[], datetime] | None = None) -> SanitizedApp | None:
+    ticket = latch.ticket()
+    if ticket is None:
+        return None
+    if not connection.in_transaction:
+        connection.execute("BEGIN IMMEDIATE")
     policy = load_policy(connection)
     get_time = clock or (lambda: datetime.now(UTC))
     result = gate_app(policy, request, context, value, get_time()) if policy is not None else None
-    return result if policy is not None and result is not None and allows_capture(policy, request, get_time()) else None
+    return result if (policy is not None and result is not None and allows_capture(policy, request, get_time())
+                      and latch.allows(ticket)) else None
 
 
 def prepare_text(connection: sqlite3.Connection, request: CaptureRequest, context: SanitizerContext,
-                 domain: object, value: object, *, clock: Callable[[], datetime] | None = None) -> str | None:
-    connection.execute("BEGIN IMMEDIATE")
+                 domain: object, value: object, *, latch: CaptureLatch, clock: Callable[[], datetime] | None = None) -> str | None:
+    ticket = latch.ticket()
+    if ticket is None:
+        return None
+    if not connection.in_transaction:
+        connection.execute("BEGIN IMMEDIATE")
     policy = load_policy(connection)
     get_time = clock or (lambda: datetime.now(UTC))
     result = gate_text(policy, request, context, domain, value, get_time()) if policy is not None else None
-    return result if policy is not None and result is not None and allows_capture(policy, request, get_time()) else None
+    return result if (policy is not None and result is not None and allows_capture(policy, request, get_time())
+                      and latch.allows(ticket)) else None

@@ -12,6 +12,7 @@ from personalcontext.app import create_app
 from personalcontext.audit.record import RETENTION, record_audit
 from personalcontext.audit.retention import AuditHousekeeping
 from personalcontext.jobs.writer import Writer
+from personalcontext.privacy.runtime.latch import CaptureLatch
 from personalcontext.storage.initialize import initialize_database
 
 
@@ -44,6 +45,25 @@ class AuditRetentionTests(unittest.IsolatedAsyncioTestCase):
             finally:
                 if housekeeping is not None:
                     await housekeeping.stop()
+                await writer.close()
+
+    async def test_background_retention_failure_pauses_local_capture(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "context.db"
+            initialize_database(path)
+            writer = Writer(path)
+            await writer.start()
+            latch = CaptureLatch()
+            latch.resume_if_unchanged(latch.generation())
+            housekeeping = AuditHousekeeping(writer, interval=0.02, on_failure=latch.pause)
+            try:
+                await housekeeping.start()
+                with (patch("personalcontext.audit.retention.prune_audit", side_effect=RuntimeError("synthetic")),
+                      self.assertRaises(RuntimeError)):
+                    await asyncio.wait_for(housekeeping.task, timeout=2)
+                self.assertTrue(latch.is_paused())
+            finally:
+                await housekeeping.stop()
                 await writer.close()
 
 

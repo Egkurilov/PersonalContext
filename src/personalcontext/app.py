@@ -20,6 +20,7 @@ from personalcontext.devices.http_routes import router as device_router
 from personalcontext.jobs.scheduler import Scheduler
 from personalcontext.privacy.http_routes import router as privacy_router
 from personalcontext.privacy.preview_routes import router as preview_router
+from personalcontext.privacy.runtime.latch import CaptureLatch
 from personalcontext.storage.initialize import initialize_database
 
 
@@ -27,11 +28,12 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         initialize_database(database_path)
+        app.state.capture_latch = CaptureLatch()
         if demo:
             app.state.demo_response = seed_demo(database_path)
-        scheduler = Scheduler(database_path, {})
+        scheduler = Scheduler(database_path, {}, on_storage_failure=app.state.capture_latch.pause)
         executor = PasswordExecutor()
-        audit_housekeeping = AuditHousekeeping(scheduler.writer)
+        audit_housekeeping = AuditHousekeeping(scheduler.writer, on_failure=app.state.capture_latch.pause)
         try:
             await scheduler.start()
             await audit_housekeeping.start()
@@ -50,6 +52,8 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
             yield
         finally:
             app.state.ready = False
+            app.state.capture_latch.pause()
+            await asyncio.to_thread(app.state.capture_latch.drain, 10)
             await audit_housekeeping.stop()
             await executor.close()
             await scheduler.stop()
