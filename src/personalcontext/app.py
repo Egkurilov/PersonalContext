@@ -74,6 +74,8 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
     async def restrict_local_requests(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         if request.client is None or request.client.host != "127.0.0.1" or request.url.scheme != "http":
             return JSONResponse({"detail": "Forbidden"}, status_code=403)
+        if any(request.headers.getlist(name) for name in ("forwarded", "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host")):
+            return JSONResponse({"detail": "Invalid forwarding headers"}, status_code=400)
         hosts = request.headers.getlist("host")
         if len(hosts) != 1 or hosts[0] not in {"127.0.0.1:17890", "127.0.0.1"}:
             return JSONResponse({"detail": "Invalid host"}, status_code=400)

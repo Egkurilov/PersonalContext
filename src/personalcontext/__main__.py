@@ -50,7 +50,8 @@ def main() -> int:
         root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[2]))
         web_root = root / "frontend" / "dist"
         app = create_app(data_dir / "context.db", web_root, demo=demo)
-        server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=17890, workers=1, log_level="warning"))
+        server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=17890, workers=1,
+                                               log_level="warning", proxy_headers=False))
         thread = threading.Thread(target=server.run, kwargs={"sockets": [listener]}, daemon=True)
         thread.start()
         deadline = time.monotonic() + 10
