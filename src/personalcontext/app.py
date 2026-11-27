@@ -18,6 +18,7 @@ from personalcontext.demo.seed import DemoResponse, seed_demo
 from personalcontext.devices.device_http import router as device_access_router
 from personalcontext.devices.http_routes import router as device_router
 from personalcontext.jobs.scheduler import Scheduler
+from personalcontext.network.boundary import LocalBoundary, check_request
 from personalcontext.privacy.http_routes import router as privacy_router
 from personalcontext.privacy.preview_routes import router as preview_router
 from personalcontext.privacy.runtime.latch import CaptureLatch
@@ -72,16 +73,13 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
 
     @app.middleware("http")
     async def restrict_local_requests(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
-        if request.client is None or request.client.host != "127.0.0.1" or request.url.scheme != "http":
-            return JSONResponse({"detail": "Forbidden"}, status_code=403)
-        if any(request.headers.getlist(name) for name in ("forwarded", "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host")):
-            return JSONResponse({"detail": "Invalid forwarding headers"}, status_code=400)
-        hosts = request.headers.getlist("host")
-        if len(hosts) != 1 or hosts[0] not in {"127.0.0.1:17890", "127.0.0.1"}:
-            return JSONResponse({"detail": "Invalid host"}, status_code=400)
-        origins = request.headers.getlist("origin")
-        if len(origins) > 1 or (origins and origins[0] != "http://127.0.0.1:17890"):
-            return JSONResponse({"detail": "Invalid origin"}, status_code=403)
+        forwarding = [value for name in ("forwarded", "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host")
+                      for value in request.headers.getlist(name)]
+        peer = request.client.host if request.client else None
+        failure = check_request(LocalBoundary(), peer, request.url.scheme, request.headers.getlist("host"),
+                                request.headers.getlist("origin"), forwarding)
+        if failure is not None:
+            return JSONResponse({"detail": failure[1]}, status_code=failure[0])
         return await call_next(request)
 
     @app.get("/healthz")
