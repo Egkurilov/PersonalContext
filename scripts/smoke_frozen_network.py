@@ -33,6 +33,18 @@ exit 0
 """
 
 
+def wait_ready(process):
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline and process.poll() is None:
+        try:
+            with urlopen("http://127.0.0.1:17890/readyz", timeout=1) as response:
+                if response.status == 200:
+                    return
+        except (URLError, TimeoutError):
+            time.sleep(0.25)
+    raise RuntimeError("Frozen application did not become ready")
+
+
 def main():
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 17890))
@@ -43,16 +55,7 @@ def main():
         process = subprocess.Popen([str(executable)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                    creationflags=subprocess.CREATE_NO_WINDOW)
         try:
-            deadline = time.monotonic() + 30
-            while time.monotonic() < deadline and process.poll() is None:
-                try:
-                    with urlopen("http://127.0.0.1:17890/readyz", timeout=1) as response:
-                        if response.status == 200:
-                            break
-                except URLError:
-                    time.sleep(0.25)
-            else:
-                raise RuntimeError("Frozen application did not become ready")
+            wait_ready(process)
             env["PC_SMOKE_PID"] = str(process.pid)
             shell = Path(os.environ["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
             encoded = base64.b64encode(QUERY.encode("utf-16le")).decode("ascii")
