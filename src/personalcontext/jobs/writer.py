@@ -11,14 +11,23 @@ T = TypeVar("T")
 
 
 class Writer:
-    def __init__(self, path: Path, capacity: int = 32) -> None:
+    def __init__(self, path: Path, capacity: int = 32, *, on_storage_failure: Callable[[], None] | None = None) -> None:
         self.path = path
+        self.on_storage_failure = on_storage_failure
+        self.safety_failed = threading.Event()
         self.queue: queue.Queue[tuple[Callable[[sqlite3.Connection], Any], Future[Any]] | None] = queue.Queue(maxsize=capacity)
         self.closed = False
         self.lock = threading.Lock()
         self.ready: Future[None] = Future()
         self.thread = threading.Thread(target=self._run, name="sqlite-writer", daemon=True)
         self.thread.start()
+
+    def _fail_closed(self) -> None:
+        if self.on_storage_failure is not None:
+            try:
+                self.on_storage_failure()
+            except Exception:  # noqa: BLE001 - stop the writer if fail-closed signalling fails
+                self.safety_failed.set()
 
     def _run(self) -> None:
         connection = None
@@ -30,6 +39,7 @@ class Writer:
             connection.execute("BEGIN IMMEDIATE")
             connection.rollback()
         except Exception as error:  # noqa: BLE001 - propagate failures to the submitting task
+            self._fail_closed()
             if connection is not None:
                 connection.close()
             with self.lock:
@@ -48,14 +58,20 @@ class Writer:
                         continue
                     try:
                         result = operation(connection)
+                        if self.safety_failed.is_set():
+                            raise RuntimeError("Writer safety unavailable")
                         connection.commit()
                     except Exception as error:  # noqa: BLE001 - propagate failures to the submitting task
+                        if isinstance(error, sqlite3.Error):
+                            self._fail_closed()
                         try:
                             connection.rollback()
                         except sqlite3.Error as rollback_error:
                             future.set_exception(rollback_error)
                             return
                         future.set_exception(error)
+                        if self.safety_failed.is_set():
+                            return
                     else:
                         future.set_result(result)
                 finally:
@@ -79,11 +95,15 @@ class Writer:
     async def submit(self, operation: Callable[[sqlite3.Connection], T]) -> T:
         future: Future[T] = Future()
         with self.lock:
+            if self.safety_failed.is_set():
+                raise RuntimeError("Writer safety unavailable")
             if self.closed:
+                self._fail_closed()
                 raise RuntimeError("Writer is closed")
             try:
                 self.queue.put_nowait((operation, future))
             except queue.Full as error:
+                self._fail_closed()
                 raise RuntimeError("Writer queue is full") from error
         return await asyncio.wrap_future(future)
 

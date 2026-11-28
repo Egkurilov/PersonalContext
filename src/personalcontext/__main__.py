@@ -15,7 +15,10 @@ import winerror
 from PIL import Image, ImageDraw
 
 from personalcontext.app import create_app
+from personalcontext.network.loopback.config import loopback_server_config
 from personalcontext.windows.lifecycle import mutex_name, request_shutdown
+from personalcontext.windows.pause_capture import PauseCapture
+from personalcontext.windows.setup_owner import OwnerSetupWindow
 
 
 def main() -> int:
@@ -48,7 +51,7 @@ def main() -> int:
         root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[2]))
         web_root = root / "frontend" / "dist"
         app = create_app(data_dir / "context.db", web_root, demo=demo)
-        server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=17890, workers=1, log_level="warning"))
+        server = uvicorn.Server(loopback_server_config(app))
         thread = threading.Thread(target=server.run, kwargs={"sockets": [listener]}, daemon=True)
         thread.start()
         deadline = time.monotonic() + 10
@@ -61,8 +64,12 @@ def main() -> int:
             return 1
         image = Image.new("RGB", (64, 64), "#111820")
         ImageDraw.Draw(image).ellipse((12, 12, 52, 52), fill="#91cdb2")
+        owner_setup = OwnerSetupWindow(app)
+        pause_capture = PauseCapture(app)
         icon = pystray.Icon("PersonalContext", image, "PersonalContext", menu=pystray.Menu(
             pystray.MenuItem("Открыть", lambda: webbrowser.open("http://127.0.0.1:17890/"), default=True),
+            pystray.MenuItem("Настроить владельца", lambda: owner_setup.open()),
+            pystray.MenuItem("Приостановить сбор", lambda: pause_capture.open()),
             pystray.MenuItem("Выход", lambda icon: icon.stop()),
         ))
         def watch_shutdown() -> None:

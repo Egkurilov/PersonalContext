@@ -6,3 +6,10 @@ main { max-width: 52rem; margin: 12vh auto; padding: 2rem; }
 h1 { font-size: clamp(2rem, 5vw, 3.5rem); }
 h2 { font-size: 1.25rem; }
 p, li { line-height: 1.6; color: #bdc9d5; }
+form { display: flex; flex-wrap: wrap; gap: .7rem; align-items: end; max-width: 34rem; }
+label { flex-basis: 100%; color: #e9eef5; }
+input, button { font: inherit; padding: .65rem .8rem; border: 1px solid #607587; border-radius: .4rem; }
+input { flex: 1 1 14rem; min-width: 0; color: #e9eef5; background: #1d2a34; }
+button { color: #111820; background: #91cdb2; cursor: pointer; }
+button:disabled { opacity: .6; cursor: wait; }
+:focus-visible { outline: 3px solid #ffd586; outline-offset: 3px; }

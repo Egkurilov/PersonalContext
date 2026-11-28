@@ -50,6 +50,18 @@ jobs:
         run: uv run python scripts/smoke_frozen_repro.py
       - if: runner.os == 'Windows'
         run: uv run python scripts/smoke_frozen.py
+      - if: runner.os == 'Windows'
+        run: uv run python scripts/smoke_frozen_auth.py
+      - if: runner.os == 'Windows'
+        run: uv run python scripts/smoke_frozen_logs.py
+      - if: runner.os == 'Windows'
+        run: uv run python scripts/smoke_frozen_network.py
+      - if: runner.os == 'Windows'
+        run: uv run python scripts/smoke_frozen_websocket.py
+      - if: runner.os == 'Windows'
+        run: uv run python scripts/smoke_frozen_tls_settings.py
+      - if: runner.os == 'Windows'
+        run: uv run python scripts/smoke_frozen_restore.py
 
       - if: runner.os == 'Windows'
         shell: pwsh
@@ -60,8 +72,10 @@ jobs:
           uv run python scripts/smoke_installer_repro.py $compiler
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - if: runner.os == 'Windows'
+        timeout-minutes: 10
         run: uv run python scripts/smoke_installer.py
       - if: runner.os == 'Windows'
+        timeout-minutes: 15
         shell: pwsh
         run: |
           $compiler = & ./scripts/ensure_inno.ps1

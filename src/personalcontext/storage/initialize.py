@@ -5,6 +5,7 @@ from alembic import command
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from sqlalchemy.engine import URL
+from sqlalchemy.exc import OperationalError
 
 from personalcontext.storage.backup import backup_database
 
@@ -34,4 +35,9 @@ def initialize_database(path: Path) -> None:
         connection.execute("DROP TABLE temp.fts_probe")
     finally:
         connection.close()
-    command.upgrade(config, "head")
+    try:
+        command.upgrade(config, "head")
+    except OperationalError as error:
+        if isinstance(error.orig, sqlite3.OperationalError):
+            raise error.orig from error
+        raise

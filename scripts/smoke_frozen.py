@@ -6,7 +6,8 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from urllib.request import urlopen
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
 
 from check_frozen_python import verify_frozen_python
 from check_packaged_inputs import verify_migrations, verify_system_runtime
@@ -42,6 +43,13 @@ def main():
                 try:
                     with urlopen("http://127.0.0.1:17890/readyz", timeout=1) as response:
                         assert response.read() == b'{"status":"ready"}'
+                    request = Request("http://127.0.0.1:17890/healthz", headers={"X-Forwarded-For": "192.0.2.1"})
+                    try:
+                        urlopen(request, timeout=1)
+                    except HTTPError as error:
+                        assert error.code == 400
+                    else:
+                        raise AssertionError("Forwarded identity was accepted")
                     with urlopen("http://127.0.0.1:17890/", timeout=1) as response:
                         assert b"PersonalContext" in response.read()
                     with urlopen("http://127.0.0.1:17890/settings/privacy", timeout=1) as response:

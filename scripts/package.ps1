@@ -15,7 +15,7 @@ try {
     [Environment]::SetEnvironmentVariable('PYTHONPATH', $null, 'Process')
     [Environment]::SetEnvironmentVariable('PYTHONHOME', $null, 'Process')
     $env:VIRTUAL_ENV = (Resolve-Path -LiteralPath '.venv').Path
-    & .venv/Scripts/pyinstaller --noconfirm --clean --onedir --name PersonalContext --add-data 'frontend/dist;frontend/dist' --add-data 'schemas;schemas' --add-data 'src/personalcontext/migrations/env.py;personalcontext/migrations' --add-data 'src/personalcontext/migrations/versions/*.py;personalcontext/migrations/versions' --collect-all alembic --copy-metadata alembic src/personalcontext/__main__.py
+    & .venv/Scripts/pyinstaller --noconfirm --clean --onedir --name PersonalContext --hidden-import win32timezone --add-data 'frontend/dist;frontend/dist' --add-data 'schemas;schemas' --add-data 'src/personalcontext/migrations/env.py;personalcontext/migrations' --add-data 'src/personalcontext/migrations/versions/*.py;personalcontext/migrations/versions' --collect-all alembic --copy-metadata alembic src/personalcontext/__main__.py
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & .venv/Scripts/python scripts/normalize_base_zip.py
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

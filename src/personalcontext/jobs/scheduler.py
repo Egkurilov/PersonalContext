@@ -8,8 +8,10 @@ from personalcontext.jobs.writer import Writer
 
 
 class Scheduler:
-    def __init__(self, path: Path, handlers: dict[str, Callable[[str], Awaitable[None]]], poll_interval: float = 1.0) -> None:
-        self.writer = Writer(path)
+    def __init__(self, path: Path, handlers: dict[str, Callable[[str], Awaitable[None]]], poll_interval: float = 1.0,
+                 *, on_storage_failure: Callable[[], None] | None = None) -> None:
+        self.writer = Writer(path, on_storage_failure=on_storage_failure)
+        self.on_storage_failure = on_storage_failure
         self.handlers = dict(handlers)
         self.poll_interval = poll_interval
         self.stopping = asyncio.Event()
@@ -25,6 +27,13 @@ class Scheduler:
         return await self.writer.submit(partial(repository.enqueue, kind=kind, key=key))
 
     async def _run(self) -> None:
+        try:
+            await self._run_jobs()
+        finally:
+            if self.on_storage_failure is not None:
+                self.on_storage_failure()
+
+    async def _run_jobs(self) -> None:
         while not self.stopping.is_set():
             job = await self.writer.submit(partial(repository.claim, kinds=tuple(self.handlers), lease_seconds=60))
             if job is None:

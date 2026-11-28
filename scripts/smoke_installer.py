@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.request import urlopen
 
 from check_installer_downgrade import verify_downgrade_guard
+from installer_process import run_installer
 
 UNINSTALL_KEY = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\{13A96698-E7A8-4BA4-AD40-012D57D437C1}_is1"
 
@@ -23,13 +24,17 @@ def main():
         install_dir = Path(directory) / "app"
         command = [str(setup), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/NOICONS", f"/DIR={install_dir}"]
         try:
-            subprocess.run(command, check=True, timeout=120)
+            print("Installer smoke: initial install", flush=True)
+            run_installer(command, check=True)
+            print("Installer smoke: version guard", flush=True)
             verify_downgrade_guard(command, UNINSTALL_KEY, install_dir)
+            print("Installer smoke: frozen executable", flush=True)
             subprocess.run([sys.executable, "scripts/smoke_frozen.py", str(install_dir / "PersonalContext.exe")], check=True, timeout=90)
             env = os.environ.copy()
             env["LOCALAPPDATA"] = str(Path(directory) / "runtime")
             running = subprocess.Popen([str(install_dir / "PersonalContext.exe")], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             try:
+                print("Installer smoke: readiness", flush=True)
                 deadline = time.monotonic() + 30
                 while time.monotonic() < deadline:
                     if running.poll() is not None:
@@ -42,7 +47,8 @@ def main():
                         time.sleep(0.25)
                 else:
                     raise RuntimeError("Installed application did not become ready")
-                subprocess.run(command + ["/CLOSEAPPLICATIONS"], env=env, check=True, timeout=120)
+                print("Installer smoke: reinstall while running", flush=True)
+                run_installer(command + ["/CLOSEAPPLICATIONS"], env=env, check=True)
                 running.wait(timeout=10)
             finally:
                 if running.poll() is None:
@@ -52,7 +58,8 @@ def main():
         finally:
             uninstaller = install_dir / "unins000.exe"
             if uninstaller.exists():
-                subprocess.run([str(uninstaller), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"], check=True, timeout=120)
+                print("Installer smoke: silent uninstall", flush=True)
+                run_installer([str(uninstaller), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"], check=True)
         assert not (install_dir / "PersonalContext.exe").exists()
     print("Per-user install, reinstall and silent uninstall passed")
 

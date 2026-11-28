@@ -1,14 +1,25 @@
-from collections.abc import AsyncIterator, Awaitable, Callable
+import asyncio
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi import FastAPI
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from personalcontext.api.routing.registry import register_routes
+from personalcontext.audit.retention import AuditHousekeeping
+from personalcontext.auth.owner_bootstrap import OwnerBootstrap
+from personalcontext.auth.owner_login import OwnerLogin
+from personalcontext.auth.password_executor import PasswordExecutor
 from personalcontext.contracts.health import HealthResponse, ReadinessResponse
 from personalcontext.demo.seed import DemoResponse, seed_demo
 from personalcontext.jobs.scheduler import Scheduler
+from personalcontext.network.listener.fail_closed import failure_callback
+from personalcontext.network.listener.manager import PrivateListener
+from personalcontext.network.middleware import restrict_requests
+from personalcontext.network.protocols.websocket import RejectWebSockets
+from personalcontext.privacy.runtime.latch import CaptureLatch
 from personalcontext.storage.initialize import initialize_database
 
 
@@ -16,34 +27,45 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         initialize_database(database_path)
+        app.state.capture_latch = CaptureLatch()
         if demo:
             app.state.demo_response = seed_demo(database_path)
-        scheduler = Scheduler(database_path, {})
+        fail_closed = failure_callback(app, app.state.capture_latch)
+        scheduler = Scheduler(database_path, {}, on_storage_failure=fail_closed)
+        executor = PasswordExecutor()
+        audit_housekeeping = AuditHousekeeping(scheduler.writer, on_failure=fail_closed)
         try:
             await scheduler.start()
+            await audit_housekeeping.start()
+            app.state.owner_login = await OwnerLogin.create(scheduler.writer, executor)
+            app.state.owner_bootstrap = OwnerBootstrap(scheduler.writer, executor)
         except BaseException:
+            await audit_housekeeping.stop()
+            await executor.close()
             await scheduler.stop()
             raise
         app.state.scheduler = scheduler
+        app.state.private_listener = PrivateListener(app, scheduler.writer, app.state.private_tls_dir)
+        app.state.audit_housekeeping = audit_housekeeping
+        app.state.loop = asyncio.get_running_loop()
         app.state.ready = True
         try:
             yield
         finally:
             app.state.ready = False
+            await app.state.private_listener.stop()
+            app.state.capture_latch.pause()
+            await asyncio.to_thread(app.state.capture_latch.drain, 10)
+            await audit_housekeeping.stop()
+            await executor.close()
             await scheduler.stop()
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app.state.private_tls_dir = database_path.parent / "tls"
+    register_routes(app)
+    app.add_middleware(RejectWebSockets)
 
-    @app.middleware("http")
-    async def restrict_local_requests(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
-        if request.client is None or request.client.host != "127.0.0.1":
-            return JSONResponse({"detail": "Forbidden"}, status_code=403)
-        if request.headers.get("host") not in {"127.0.0.1:17890", "127.0.0.1"}:
-            return JSONResponse({"detail": "Invalid host"}, status_code=400)
-        origin = request.headers.get("origin")
-        if origin is not None and origin != "http://127.0.0.1:17890":
-            return JSONResponse({"detail": "Invalid origin"}, status_code=403)
-        return await call_next(request)
+    app.middleware("http")(restrict_requests)
 
     @app.get("/healthz")
     async def health() -> HealthResponse:
@@ -51,7 +73,8 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
 
     @app.get("/readyz", response_model=None)
     async def ready() -> ReadinessResponse | JSONResponse:
-        if not getattr(app.state, "ready", False) or app.state.scheduler.task.done():
+        if (not getattr(app.state, "ready", False) or app.state.scheduler.task.done()
+                or app.state.audit_housekeeping.task.done()):
             return JSONResponse(ReadinessResponse(status="unavailable").model_dump(), status_code=503)
         return ReadinessResponse(status="ready")
 
