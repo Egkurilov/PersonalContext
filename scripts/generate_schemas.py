@@ -11,6 +11,7 @@ from personalcontext.contracts.event_common import (
 )
 from personalcontext.contracts.event_temporal import EventTemporal
 from personalcontext.contracts.health import HealthResponse, ReadinessResponse
+from personalcontext.ingest.visit.model import WebVisit
 
 
 def main() -> None:
@@ -21,11 +22,13 @@ def main() -> None:
         ("event-id", EventId), ("event-kind", EventKind),
         ("event-quality", EventQuality), ("event-timing", EventTiming),
         ("event-temporal", EventTemporal),
+        ("web-visit", WebVisit),
     )
     for name, contract in contracts:
         schema = TypeAdapter(contract).json_schema()
         schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
-        (root / f"{name}.v1.schema.json").write_text(json.dumps(schema, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        indent = None if name == "web-visit" else 2
+        (root / f"{name}.v1.schema.json").write_text(json.dumps(schema, indent=indent, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

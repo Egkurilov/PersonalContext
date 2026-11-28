@@ -28,7 +28,7 @@ def main():
     migrations = executable.parent / "_internal/personalcontext/migrations"
     verify_migrations(Path("src/personalcontext/migrations"), migrations)
     verify_system_runtime(executable.parent / "_internal")
-    for name in ("health.v1.schema.json", "readiness.v1.schema.json", "event-id.v1.schema.json", "event-kind.v1.schema.json", "event-quality.v1.schema.json", "event-timing.v1.schema.json", "event-temporal.v1.schema.json"):
+    for name in ("health.v1.schema.json", "readiness.v1.schema.json", "event-id.v1.schema.json", "event-kind.v1.schema.json", "event-quality.v1.schema.json", "event-timing.v1.schema.json", "event-temporal.v1.schema.json", "web-visit.v1.schema.json"):
         assert (executable.parent / "_internal" / "schemas" / name).read_bytes() == (Path("schemas") / name).read_bytes().replace(b"\r\n", b"\n")
     measure_fresh_start(executable)
     verify_migrations(Path("src/personalcontext/migrations"), migrations)
