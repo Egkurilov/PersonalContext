@@ -19,6 +19,7 @@ from personalcontext.demo.seed import DemoResponse, seed_demo
 from personalcontext.devices.device_http import router as device_access_router
 from personalcontext.devices.http_routes import router as device_router
 from personalcontext.jobs.scheduler import Scheduler
+from personalcontext.network.firewall.http import router as firewall_router
 from personalcontext.network.middleware import restrict_requests
 from personalcontext.network.settings_http import router as private_settings_router
 from personalcontext.privacy.http_routes import router as privacy_router
@@ -75,6 +76,7 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
     app.include_router(config_router)
     app.include_router(sources_router)
     app.include_router(private_settings_router)
+    app.include_router(firewall_router)
 
     app.middleware("http")(restrict_requests)
 

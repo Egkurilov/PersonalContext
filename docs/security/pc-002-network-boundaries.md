@@ -77,6 +77,20 @@ deletes the candidate and its protected passphrase along with other access state
 the owner must configure it again. Downgrade refuses to discard a candidate or
 its audit events; restore a verified earlier backup to roll back.
 
+The local owner-only `POST /api/v1/network/private/firewall/check` performs a
+bounded, read-only inspection of the selected interface's Windows firewall
+profile and active inbound allow rules. It requires Origin, CSRF and the owner
+session, repeats authorization and candidate revision checks after inspection,
+and returns only `restricted`, `not_restricted` or `unavailable`; it never
+enables the listener. The conservative assessment rejects disabled/non-blocking
+profiles, broad or ambiguous overlapping allows, edge traversal, and missing
+explicit executable/port/peer coverage. The effective policy can change during
+or after inspection, and Windows Filtering Platform can include policy outside
+these high-level rules. Therefore `restricted` is diagnostic evidence, not a
+durable permission to start or keep a listener running. Rule details are not
+logged or returned. See Microsoft's [active policy store description](https://learn.microsoft.com/en-us/powershell/module/netsecurity/get-netfirewallrule)
+and [Windows Filtering Platform overview](https://learn.microsoft.com/en-us/windows/win32/fwp/about-windows-filtering-platform).
+
 Private access is not wired to an active listener or settings UI and is not available yet.
 Before enabling it, implement and verify certificate and key storage, client
 trust, selected local interface binding, firewall restrictions, HTTPS

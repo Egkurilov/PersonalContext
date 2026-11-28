@@ -45,6 +45,8 @@ class PrivateTransportAuthTests(unittest.TestCase):
                 self.assertEqual(remote.get("/api/v1/network/private/config").status_code, 403)
                 self.assertEqual(remote.post("/api/v1/network/private/config",
                                              headers={"Origin": REMOTE, "X-CSRF-Token": csrf}, json={}).status_code, 403)
+                self.assertEqual(remote.post("/api/v1/network/private/firewall/check",
+                                             headers={"Origin": REMOTE, "X-CSRF-Token": csrf}).status_code, 403)
                 self.assertEqual(remote.post("/api/v1/auth/rotate", headers={"Origin": LOCAL, "X-CSRF-Token": csrf}).status_code, 403)
                 response = remote.post("/api/v1/auth/rotate", headers={"Origin": REMOTE, "X-CSRF-Token": csrf})
                 self.assertEqual(response.status_code, 200)

@@ -55,7 +55,7 @@ def main():
                 if csrf:
                     headers["X-CSRF-Token"] = csrf
                 request = Request(ORIGIN + path, data=json.dumps(value).encode(), headers=headers, method="POST")
-                return opener.open(request, timeout=10)
+                return opener.open(request, timeout=50)
 
             try:
                 deadline = time.monotonic() + 30
@@ -80,6 +80,9 @@ def main():
                 with opener.open(ORIGIN + "/api/v1/network/private/config", timeout=5) as response:
                     value = json.load(response)
                     assert value["configured"] and value["enabled"] is False
+                with post("/api/v1/network/private/firewall/check", {}, csrf) as response:
+                    value = json.load(response)
+                    assert value["firewall"] in ("unavailable", "not_restricted", "restricted") and value["enabled"] is False
                 print("Frozen synthetic TLS settings smoke passed")
             finally:
                 process.terminate()
