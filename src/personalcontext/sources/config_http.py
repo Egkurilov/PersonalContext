@@ -28,7 +28,7 @@ async def config(request: Request) -> Response:
 
     def read(connection: sqlite3.Connection) -> tuple[bool, CapturePolicy | None, list[Source] | None, int]:
         now = int(time.time())
-        if not authorize_device(connection, token, device_id, CONFIG):
+        if not authorize_device(connection, token, device_id, CONFIG, request.scope.get("personalcontext.extension_origin")):
             return False, None, None, now
         return True, load_policy(connection), read_sources(connection, device_id=device_id, limit=17), now
 

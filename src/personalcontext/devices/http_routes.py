@@ -53,7 +53,8 @@ async def device_enroll(request: Request) -> Response:
     decision = await writer.submit(lambda connection: consume_attempt(connection, "device_enroll", int(time.time())))
     if not decision.allowed:
         return error(429, "rate_limited", decision.retry_after)
-    device = await writer.submit(lambda connection: enroll(connection, body["code"], now=int(time.time())))
+    device = await writer.submit(lambda connection: enroll(connection, body["code"], now=int(time.time()),
+                                                            origin=request.scope.get("personalcontext.extension_origin")))
     if device is None:
         await writer.submit(lambda connection: record_denied(connection, "device_enroll", "anonymous", int(time.time())))
         return error(401, "invalid_credentials")

@@ -25,7 +25,8 @@ async def heartbeat(request: Request) -> Response:
         return error(400, "invalid_request")
     token = headers[0][7:]
     accepted = await request.app.state.scheduler.writer.submit(
-        lambda connection: record_heartbeat(connection, token, body["device_id"], now=int(time.time())),
+        lambda connection: record_heartbeat(connection, token, body["device_id"], now=int(time.time()),
+                                            origin=request.scope.get("personalcontext.extension_origin")),
     )
     if not accepted:
         return error(401, "unauthorized")

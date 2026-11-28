@@ -5,6 +5,8 @@ import re
 import sqlite3
 import uuid
 
+from personalcontext.devices.extension_origin import device_origin_matches
+
 _TOKEN = re.compile(r"[A-Za-z0-9_-]{43}\Z")
 INGEST, HEARTBEAT, CONFIG = 1, 2, 4
 
@@ -25,14 +27,16 @@ def valid_device_id(value: object) -> bool:
         return False
 
 
-def authorize_device(connection: sqlite3.Connection, token: object, device_id: object, scope: object) -> bool:
+def authorize_device(connection: sqlite3.Connection, token: object, device_id: object, scope: object,
+                     origin: object = None) -> bool:
     digest = digest_token(token)
     if digest is None or not valid_device_id(device_id) or type(scope) is not int or scope not in (1, 2, 4):
         return False
     row = connection.execute(
         "SELECT scope_mask,revoked_at,created_at,last_seen FROM devices WHERE device_id=? AND token_hash=?", (device_id, digest),
     ).fetchone()
-    return bool(row and type(row[0]) is int and 1 <= row[0] <= 7 and row[1] is None
+    return bool(row and device_origin_matches(connection, device_id, origin)
+                and type(row[0]) is int and 1 <= row[0] <= 7 and row[1] is None
                 and type(row[2]) is int and 0 <= row[2] <= 2**53 - 300
                 and (row[3] is None or (type(row[3]) is int and row[2] <= row[3] <= 2**53 - 300))
                 and row[0] & scope)
