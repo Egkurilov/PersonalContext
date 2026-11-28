@@ -104,3 +104,11 @@ The separately opted-in private listener is experimental and off by default.
 Its [lifecycle notes](pc-002-listener-lifecycle.md) describe its owner controls,
 monitoring gaps, WFP permission limit and remaining LAN/VPN acceptance tests.
 Never treat the request filter as a substitute for TLS, firewall or authentication.
+
+`test_private_owner_socket.py` exercises owner login, Secure/HttpOnly/Strict
+cookie attributes, Origin, CSRF, logout and denied bootstrap through a real TLS
+socket bound to an eligible private address on the same machine. It uses a
+synthetic pinned certificate and mocks TLS material/vault validation; the peer
+allowlist contains only that machine's address. The test skips when no eligible
+interface exists. It does not exercise listener activation, effective firewall
+filtering, a separate device, real certificate trust or LAN/VPN connectivity.
