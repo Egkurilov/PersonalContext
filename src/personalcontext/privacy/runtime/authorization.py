@@ -15,7 +15,8 @@ def device_policy_allows(connection: sqlite3.Connection, *, token: object, devic
                          request: CaptureRequest, latch: CaptureLatch, origin: object = None,
                          clock: Callable[[], datetime] | None = None) -> bool:
     """Origin must come from the verified server transport, never from a payload."""
-    if not connection.in_transaction or not isinstance(request, CaptureRequest):
+    ticket = latch.ticket()
+    if ticket is None or not connection.in_transaction or not isinstance(request, CaptureRequest):
         return False
     if not owns_source(connection, token, device_id, request.source, origin):
         return False
@@ -35,6 +36,6 @@ def device_policy_allows(connection: sqlite3.Connection, *, token: object, devic
     if policy is None or not policy_time_valid(latch, policy, now) or not allows_capture(policy, request, now):
         return False
     try:
-        return now.timestamp() >= updated
+        return now.timestamp() >= updated and latch.allows(ticket)
     except (ValueError, TypeError, OverflowError, OSError):
         return False
