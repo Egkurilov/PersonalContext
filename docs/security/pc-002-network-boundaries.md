@@ -4,6 +4,11 @@ The running listener is still exactly `127.0.0.1:17890` over HTTP. Its request
 boundary checks the actual ASGI peer, HTTP scheme, exact Host and optional
 Origin and rejects forwarding headers. Uvicorn proxy-header interpretation is
 disabled. Existing CSRF and authentication checks remain separate.
+WebSockets have no supported contract and are disabled in Uvicorn and rejected
+at the ASGI boundary on both local and prospective private transports. Synthetic
+route tests demonstrate that adding a WebSocket route cannot bypass the HTTP
+peer, Host, Origin and authentication boundary; any future WebSocket support
+requires a separately reviewed security contract.
 
 The same boundary module validates a prospective private HTTPS request against
 an explicit private bind address, canonical lower-case DNS hostname, port and

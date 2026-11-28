@@ -23,6 +23,7 @@ from personalcontext.jobs.scheduler import Scheduler
 from personalcontext.mcp_auth.http import router as mcp_auth_router
 from personalcontext.network.firewall.http import router as firewall_router
 from personalcontext.network.middleware import restrict_requests
+from personalcontext.network.protocols.websocket import RejectWebSockets
 from personalcontext.network.settings_http import router as private_settings_router
 from personalcontext.privacy.http_routes import router as privacy_router
 from personalcontext.privacy.preview_routes import router as preview_router
@@ -81,6 +82,7 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
     app.include_router(sources_router)
     app.include_router(private_settings_router)
     app.include_router(firewall_router)
+    app.add_middleware(RejectWebSockets)
 
     app.middleware("http")(restrict_requests)
 

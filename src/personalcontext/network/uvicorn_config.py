@@ -30,5 +30,5 @@ def private_server_config(app: ASGIApp, boundary: PrivateBoundary, cert: Path, k
         return context
 
     return uvicorn.Config(ScopedTransport(app, boundary), host=boundary.address, port=boundary.port,
-                          lifespan="off", workers=1, proxy_headers=False, access_log=False,
+                          lifespan="off", workers=1, proxy_headers=False, access_log=False, ws="none",
                           log_level="warning", ssl_context_factory=tls_factory)

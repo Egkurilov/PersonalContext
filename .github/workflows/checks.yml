@@ -53,6 +53,8 @@ jobs:
       - if: runner.os == 'Windows'
         run: uv run python scripts/smoke_frozen_auth.py
       - if: runner.os == 'Windows'
+        run: uv run python scripts/smoke_frozen_websocket.py
+      - if: runner.os == 'Windows'
         run: uv run python scripts/smoke_frozen_tls_settings.py
       - if: runner.os == 'Windows'
         run: uv run python scripts/smoke_frozen_restore.py

@@ -29,5 +29,11 @@ and that [WFP access is controlled by security descriptors](https://learn.micros
 This result is specific to that account and machine. A successful probe only
 proves subscription and unsubscription succeeded at that moment; it does not
 prove complete monitoring, notification delivery or effective firewall policy.
+Microsoft explicitly describes [BFE change notifications](https://learn.microsoft.com/en-us/windows/win32/fwp/change-notifications)
+as asynchronous and not guaranteed to be delivered. Therefore even a
+successful subscription cannot serve as the sole enforcement mechanism or
+guarantee immediate shutdown after a policy change. Network peer enforcement
+must remain independent, and any monitoring delay and firewall assumptions
+must be stated in the eventual security review.
 The application does not elevate, change WFP permissions or start the listener
 on the basis of this probe.

@@ -97,4 +97,5 @@ class PrivateTlsSocketTests(unittest.TestCase):
             self.assertTrue(config.is_ssl)
             self.assertFalse(config.proxy_headers)
             self.assertFalse(config.access_log)
+            self.assertEqual(config.ws, "none")
             self.assertEqual(config.ssl.minimum_version, ssl.TLSVersion.TLSv1_2)

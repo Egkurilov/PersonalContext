@@ -13,6 +13,9 @@ class ScopedTransport:
         self._boundary = boundary
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "websocket":
+            await send({"type": "websocket.close", "code": 1008})
+            return
         if scope["type"] == "http":
             scope = dict(scope)
             scope["personalcontext.boundary"] = self._boundary
