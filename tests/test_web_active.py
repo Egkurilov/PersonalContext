@@ -81,6 +81,19 @@ class WebActiveTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self.submit(event | {"source_id": str(uuid.uuid4())}), "rejected")
         self.assertEqual(await self.counts(), (0, 0))
 
+    async def test_interval_start_before_consent_is_denied_in_mixed_batch(self):
+        await self.prepare()
+        device = self.devices[0]
+        event = active_event(device.device_id, self.source) | {
+            "started_at": "1970-01-01T00:16:11Z", "ended_at": "1970-01-01T00:16:12Z",
+        }
+        context = SanitizerContext(allowed_domains=frozenset({"example.org"}), private=False, sensitivity="ordinary")
+        results = await submit_visit_batch(self.writer, self.latch, device.token, device.device_id,
+                                           json.dumps([event]).encode(), context,
+                                           clock=lambda: datetime.fromtimestamp(1016, UTC))
+        self.assertEqual(results, ["rejected"])
+        self.assertEqual(await self.counts(), (0, 0))
+
     async def test_internal_record_requires_transaction(self):
         with (closing(sqlite3.connect(self.path)) as connection,
               self.assertRaisesRegex(RuntimeError, "Capture transaction required")):

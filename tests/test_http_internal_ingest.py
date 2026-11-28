@@ -43,6 +43,8 @@ class HttpInternalIngestTests(unittest.TestCase):
                   "grants": [{"source": source, "scope": "metadata"}]}
         self.assertEqual(self.client.patch("/api/v1/privacy/policy", json=policy, headers=self.owner_headers).status_code, 200)
         event["policy_version"] = 3
+        now = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+        event.update(started_at=now, observed_at=now)
         self.assertEqual(submit(other, event | {"device_id": other["device_id"]}), "rejected")
         self.assertEqual(submit(first, event), "accepted")
         self.assertEqual(submit(first, event), "duplicate")

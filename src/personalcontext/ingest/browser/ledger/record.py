@@ -26,9 +26,9 @@ def _record_browser(connection: sqlite3.Connection, event: WebVisit | WebActive,
                     context: SanitizerContext, latch: CaptureLatch, clock: Callable[[], datetime]) -> VisitResult | None:
     if not connection.in_transaction:
         raise RuntimeError("Capture transaction required")
-    source = connection.execute("SELECT kind FROM sources WHERE source_id=? AND device_id=?",
+    source = connection.execute("SELECT kind,updated_at FROM sources WHERE source_id=? AND device_id=?",
                                 (event.source_id, event.device_id)).fetchone()
-    if source != ("browser",):
+    if source is None or source[0] != "browser" or type(source[1]) is not int:
         return None
     now = clock()
     try:
@@ -36,6 +36,13 @@ def _record_browser(connection: sqlite3.Connection, event: WebVisit | WebActive,
             return None
         received = int(now.timestamp())
         if not 0 <= received <= 2**53 - 1 - _RETENTION:
+            return None
+        policy = connection.execute("SELECT issued_at FROM capture_policy WHERE singleton=1 AND version=?",
+                                    (event.policy_version,)).fetchone()
+        if policy is None or type(policy[0]) is not int or policy[0] < 0:
+            return None
+        issued = _EPOCH + Fraction(max(policy[0], source[1]))
+        if _instant(event.started_at) < issued:
             return None
         latest = _EPOCH + Fraction(received + 300)
         if any(_instant(value) > latest for value in (event.started_at, event.observed_at)):

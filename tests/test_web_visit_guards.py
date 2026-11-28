@@ -48,6 +48,22 @@ class WebVisitGuardTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self.counts(), (0, 0))
         self.assertTrue(self.latch.is_paused())
 
+    async def test_event_predating_current_consent_does_not_write(self):
+        await self.prepare()
+        event = visit_fixture.synthetic_event(self.devices[0].device_id, self.source)
+        self.event = event | {"started_at": "1970-01-01T00:16:51Z",
+                              "observed_at": "1970-01-01T00:16:51Z"}
+        self.assertEqual(await self.submit(), "rejected")
+        self.assertEqual(await self.counts(), (0, 0))
+        self.event = event | {"started_at": "1970-01-01T00:16:53Z",
+                              "observed_at": "1970-01-01T00:16:53Z"}
+        self.assertEqual(await self.submit(), "rejected")
+        self.assertEqual(await self.counts(), (0, 0))
+        self.event = event | {"started_at": "1970-01-01T00:16:54Z",
+                              "observed_at": "1970-01-01T00:16:54Z"}
+        self.assertEqual(await self.submit(), "accepted")
+        self.assertEqual(await self.counts(), (1, 1))
+
     async def test_deny_overrides_allow_without_writing(self):
         await self.prepare()
         grant = PolicyDraft(False, 600, frozenset({self.source}), frozenset({self.source}),
