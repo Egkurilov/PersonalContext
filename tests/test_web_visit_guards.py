@@ -74,6 +74,20 @@ class WebVisitGuardTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self.submit(), "rejected")
         self.assertEqual(await self.counts(), (0, 0))
 
+    async def test_committed_retry_after_source_pause_is_duplicate_not_new_capture(self):
+        await self.prepare()
+        self.event = visit_fixture.synthetic_event(self.devices[0].device_id, self.source)
+        self.assertEqual(await self.submit(), "accepted")
+        await self.writer.submit(partial(set_source_pause, token=self.owner.token, csrf=self.owner.csrf,
+                                         source_id=self.source, expected_revision=2, paused=True, now=1017))
+        await self.writer.submit(partial(set_source_pause, token=self.owner.token, csrf=self.owner.csrf,
+                                         source_id=self.source, expected_revision=3, paused=False, now=1018))
+        self.assertEqual(await self.submit(1019), "duplicate")
+        self.event = {**self.event, "event_id": "00000000-0000-4000-8000-000000000000",
+                      "source_event_key": "after-pause"}
+        self.assertEqual(await self.submit(1019), "rejected")
+        self.assertEqual(await self.counts(), (1, 1))
+
     async def test_concurrent_retries_commit_one_event_and_one_job(self):
         await self.prepare()
         self.event = visit_fixture.synthetic_event(self.devices[0].device_id, self.source)

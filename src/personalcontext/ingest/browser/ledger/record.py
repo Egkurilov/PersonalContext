@@ -37,13 +37,6 @@ def _record_browser(connection: sqlite3.Connection, event: WebVisit | WebActive,
         received = int(now.timestamp())
         if not 0 <= received <= 2**53 - 1 - _RETENTION:
             return None
-        policy = connection.execute("SELECT issued_at FROM capture_policy WHERE singleton=1 AND version=?",
-                                    (event.policy_version,)).fetchone()
-        if policy is None or type(policy[0]) is not int or policy[0] < 0:
-            return None
-        issued = _EPOCH + Fraction(max(policy[0], source[1]))
-        if _instant(event.started_at) < issued:
-            return None
         latest = _EPOCH + Fraction(received + 300)
         if any(_instant(value) > latest for value in (event.started_at, event.observed_at)):
             return None
@@ -71,6 +64,13 @@ def _record_browser(connection: sqlite3.Connection, event: WebVisit | WebActive,
             raise sqlite3.DatabaseError("Event outbox unavailable")
         expected = (event.event_id, event.source_id, event.source_event_key, digest, "event:" + event.event_id, "event.normalize.v1")
         return "duplicate" if existing == [expected] else "conflict"
+    policy = connection.execute("SELECT issued_at FROM capture_policy WHERE singleton=1 AND version=?",
+                                (event.policy_version,)).fetchone()
+    if policy is None or type(policy[0]) is not int or policy[0] < 0:
+        return None
+    issued = _EPOCH + Fraction(max(policy[0], source[1]))
+    if _instant(event.started_at) < issued:
+        return None
     key = "event:" + event.event_id
     connection.execute("INSERT INTO jobs(idempotency_key,kind,status) VALUES (?,?,'pending')", (key, "event.normalize.v1"))
     connection.execute(
