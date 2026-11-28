@@ -10,8 +10,8 @@ import test_web_visit_guards as fixture
 from test_web_visit_ledger import synthetic_event
 
 from personalcontext.devices.pairing import revoke_device
+from personalcontext.ingest.browser.ledger.record import _record_browser as _record
 from personalcontext.ingest.visit.batch import submit_visit_batch
-from personalcontext.ingest.visit.service import _record
 from personalcontext.privacy.policy_store import PolicyDraft, save_policy
 from personalcontext.privacy.sanitizer.rules import SanitizerContext
 

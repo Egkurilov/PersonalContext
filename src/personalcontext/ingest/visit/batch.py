@@ -7,8 +7,10 @@ from datetime import UTC, datetime
 
 from pydantic import ValidationError
 
+from personalcontext.ingest.active.model import WebActive
+from personalcontext.ingest.browser.ledger.record import VisitResult
+from personalcontext.ingest.browser.ledger.record import _record_browser as _record
 from personalcontext.ingest.visit.model import WebVisit
-from personalcontext.ingest.visit.service import VisitResult, _record
 from personalcontext.jobs.capture_commit import submit_capture
 from personalcontext.jobs.writer import Writer
 from personalcontext.privacy.capture_policy import CaptureRequest
@@ -56,10 +58,16 @@ async def submit_visit_batch(writer: Writer, latch: CaptureLatch, token: object,
     values = _parse(raw)
     if not values:
         return []
-    events: list[WebVisit | None] = []
+    events: list[WebVisit | WebActive | None] = []
     for value in values:
+        event: WebVisit | WebActive | None
         try:
-            event = WebVisit.model_validate(value) if type(value) is dict else None
+            if type(value) is not dict:
+                event = None
+            elif value.get("kind") == "web_active":
+                event = WebActive.model_validate(value)
+            else:
+                event = WebVisit.model_validate(value)
         except (ValidationError, ValueError, TypeError):
             event = None
         events.append(event if event is not None and event.device_id == device_id else None)
