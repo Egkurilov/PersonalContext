@@ -3,6 +3,7 @@ import sqlite3
 import sys
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 from personalcontext.jobs.scheduler import Scheduler
@@ -63,7 +64,7 @@ from personalcontext.jobs import repository
 connection = sqlite3.connect(sys.argv[1])
 repository.enqueue(connection, 'synthetic', 'crash-fixture')
 connection.commit()
-repository.claim(connection, ('synthetic',), 60)
+repository.claim(connection, ('synthetic',), 3)
 connection.commit()
 print('claimed', flush=True)
 time.sleep(30)
@@ -75,9 +76,6 @@ time.sleep(30)
         finally:
             process.kill()
             await asyncio.wait_for(process.wait(), 5)
-        with sqlite3.connect(self.path) as connection:
-            connection.execute("UPDATE jobs SET lease_until=0 WHERE idempotency_key='crash-fixture'")
-        connection.close()
         completed = asyncio.Event()
 
         async def handler(_key):
@@ -85,4 +83,7 @@ time.sleep(30)
 
         self.scheduler = Scheduler(self.path, {"synthetic": handler}, poll_interval=0.01)
         await self.scheduler.start()
-        await asyncio.wait_for(completed.wait(), 3)
+        await asyncio.wait_for(completed.wait(), 10)
+        with closing(sqlite3.connect(self.path)) as connection:
+            attempts = connection.execute("SELECT attempts FROM jobs WHERE idempotency_key='crash-fixture'").fetchone()
+        self.assertEqual(attempts, (2,))
