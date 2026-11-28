@@ -6,6 +6,12 @@ from contextlib import ExitStack, contextmanager
 from pathlib import Path
 from typing import Any, cast
 
+from personalcontext.network.ancestor_acl import check_ancestors
+
+
+def trusted_file_owner(owner_sid: str, trusted: set[str]) -> bool:
+    return owner_sid in trusted - {"S-1-3-4"}
+
 
 @contextmanager
 def locked_tls_material(root: Path, cert: Path, key: Path) -> Iterator[None]:
@@ -36,7 +42,8 @@ def locked_tls_material(root: Path, cert: Path, key: Path) -> Iterator[None]:
                 raise ValueError("Invalid TLS material")
             security = win32security.GetSecurityInfo(int(handle), win32security.SE_FILE_OBJECT,
                 win32security.OWNER_SECURITY_INFORMATION | win32security.DACL_SECURITY_INFORMATION)
-            if security.GetSecurityDescriptorOwner() != owner:
+            owner_sid = win32security.ConvertSidToStringSid(security.GetSecurityDescriptorOwner())
+            if not trusted_file_owner(owner_sid, trusted):
                 raise ValueError("Invalid owner")
             acl = security.GetSecurityDescriptorDacl()
             if acl is None:
@@ -48,6 +55,7 @@ def locked_tls_material(root: Path, cert: Path, key: Path) -> Iterator[None]:
                     raise ValueError("Unsupported ACE")
                 if kind == win32security.ACCESS_ALLOWED_ACE_TYPE and win32security.ConvertSidToStringSid(ace[2]) not in trusted:
                     raise ValueError("Untrusted ACE")
+        check_ancestors(root, trusted)
     except Exception:  # noqa: BLE001 - do not disclose paths or security descriptors
         stack.close()
         raise ValueError("TLS file permissions unavailable") from None

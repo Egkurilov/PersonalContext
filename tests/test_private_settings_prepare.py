@@ -1,3 +1,4 @@
+import os
 import shutil
 import sqlite3
 import ssl
@@ -32,7 +33,7 @@ class PrivateSettingsPreparationTests(unittest.TestCase):
 
     def test_encrypted_key_and_trusted_certificate_are_required(self):
         fixture = tls_fixture.TlsIdentityTests
-        with tempfile.TemporaryDirectory() as directory:
+        with tempfile.TemporaryDirectory(dir=os.environ["LOCALAPPDATA"]) as directory:
             root = Path(directory) / "tls"
             root.mkdir()
             shutil.copyfile(fixture.cert, root / "cert.pem")
@@ -72,7 +73,7 @@ class PrivateSettingsPreparationTests(unittest.TestCase):
 
     def test_real_owner_api_protects_secret_and_does_not_enable_listener(self):
         fixture = tls_fixture.TlsIdentityTests
-        with tempfile.TemporaryDirectory() as directory:
+        with tempfile.TemporaryDirectory(dir=os.environ["LOCALAPPDATA"]) as directory:
             root = Path(directory)
             tls_dir = root / "tls"
             tls_dir.mkdir()

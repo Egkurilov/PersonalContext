@@ -32,7 +32,7 @@ def main():
         probe.bind(("127.0.0.1", 17890))
     fixture.setUpClass()
     try:
-        with tempfile.TemporaryDirectory() as directory:
+        with tempfile.TemporaryDirectory(dir=os.environ["LOCALAPPDATA"]) as directory:
             root = Path(directory) / "PersonalContext" / "data"
             tls_dir = root / "tls"
             tls_dir.mkdir(parents=True)

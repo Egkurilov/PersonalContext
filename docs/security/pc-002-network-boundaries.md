@@ -55,16 +55,19 @@ accepts their simple filenames, a private address, hostname, port, peer CIDRs,
 and a passphrase of 16–1024 UTF-8 bytes. Preparation requires a local fixed
 NTFS volume, files resolving inside that directory, matching trusted TLS and an
 encrypted key. The TLS directory and both files must be owned by the current
-user and have a non-null DACL with no allow ACE for principals other than that
+user, SYSTEM or Administrators and have a non-null DACL with no allow ACE for principals other than that
 user, SYSTEM, Administrators and the Windows owner-rights SID. Unsupported ACE
 types fail closed. Handles are held without write/delete sharing during TLS
 preflight, preventing replacement of the checked files during that operation.
 Only the DPAPI-protected passphrase is saved. GET returns settings
 without the passphrase; both methods are forbidden on a private transport.
-The preflight is bounded and happens outside the SQLite writer. This conservative
-check may reject otherwise safe ACLs. It does not establish the ACLs of ancestor
-directories, defeat administrators or prevent a trusted owner from changing
-files after preflight. Listener activation and a settings UI remain unimplemented;
+The preflight is bounded and happens outside the SQLite writer. Ancestor
+directories are checked for untrusted ownership and ACEs that permit deletion,
+replacement or changing ownership/DACL; read-only access to ancestors is allowed.
+Reparse-point ancestors, null DACLs and unsupported effective ACE types are
+rejected. These conservative checks may reject otherwise safe ACLs; they do not
+defeat administrators or prevent a trusted owner from changing files after
+preflight. Listener activation and a settings UI remain unimplemented;
 recheck handles, ACLs and certificate at actual startup. See Microsoft's
 [DACL guidance](https://learn.microsoft.com/en-us/windows/win32/secauthz/dacls-and-aces)
 and [null DACL behavior](https://learn.microsoft.com/en-us/windows/win32/secauthz/null-dacls-and-empty-dacls).
@@ -74,7 +77,7 @@ deletes the candidate and its protected passphrase along with other access state
 the owner must configure it again. Downgrade refuses to discard a candidate or
 its audit events; restore a verified earlier backup to roll back.
 
-Private access is not wired to a listener or settings and is not available yet.
+Private access is not wired to an active listener or settings UI and is not available yet.
 Before enabling it, implement and verify certificate and key storage, client
 trust, selected local interface binding, firewall restrictions, HTTPS
 session cookies, owner opt-in, lifecycle and real LAN/VPN negative tests. Never
