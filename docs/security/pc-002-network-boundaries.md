@@ -54,11 +54,20 @@ separate `.pem` files under `%LOCALAPPDATA%/PersonalContext/data/tls`; the API
 accepts their simple filenames, a private address, hostname, port, peer CIDRs,
 and a passphrase of 16–1024 UTF-8 bytes. Preparation requires a local fixed
 NTFS volume, files resolving inside that directory, matching trusted TLS and an
-encrypted key. Only the DPAPI-protected passphrase is saved. GET returns settings
+encrypted key. The TLS directory and both files must be owned by the current
+user and have a non-null DACL with no allow ACE for principals other than that
+user, SYSTEM, Administrators and the Windows owner-rights SID. Unsupported ACE
+types fail closed. Handles are held without write/delete sharing during TLS
+preflight, preventing replacement of the checked files during that operation.
+Only the DPAPI-protected passphrase is saved. GET returns settings
 without the passphrase; both methods are forbidden on a private transport.
-The preflight is bounded and happens outside the SQLite writer. File ACL
-verification, listener activation and a settings UI remain unimplemented. Check
-the files and certificate again at actual startup: they can change after save.
+The preflight is bounded and happens outside the SQLite writer. This conservative
+check may reject otherwise safe ACLs. It does not establish the ACLs of ancestor
+directories, defeat administrators or prevent a trusted owner from changing
+files after preflight. Listener activation and a settings UI remain unimplemented;
+recheck handles, ACLs and certificate at actual startup. See Microsoft's
+[DACL guidance](https://learn.microsoft.com/en-us/windows/win32/secauthz/dacls-and-aces)
+and [null DACL behavior](https://learn.microsoft.com/en-us/windows/win32/secauthz/null-dacls-and-empty-dacls).
 
 Migration `0012` adds the candidate and a payload-free audit category. Restore
 deletes the candidate and its protected passphrase along with other access state;

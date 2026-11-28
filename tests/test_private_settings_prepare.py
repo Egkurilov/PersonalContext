@@ -9,6 +9,7 @@ from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
 
+import test_tls_file_acl as tls_acl
 import test_tls_identity as tls_fixture
 from fastapi.testclient import TestClient
 
@@ -37,6 +38,7 @@ class PrivateSettingsPreparationTests(unittest.TestCase):
             shutil.copyfile(fixture.cert, root / "cert.pem")
             shutil.copyfile(fixture.encrypted, root / "key.pem")
             shutil.copyfile(fixture.key, root / "plain.pem")
+            tls_acl.protect_fixture(root, root / "cert.pem", root / "key.pem", root / "plain.pem")
             body = {"revision": 0, "address": "192.168.7.2", "hostname": "pc.example.test", "port": 18443,
                     "peers": ["192.168.7.0/24"], "cert": "cert.pem", "key": "key.pem",
                     "passphrase": "synthetic-test-passphrase"}
@@ -46,10 +48,27 @@ class PrivateSettingsPreparationTests(unittest.TestCase):
                 candidate = prepare_candidate(root, body)
                 self.assertEqual(open_passphrase(candidate.protected), b"synthetic-test-passphrase")
                 self.assertNotIn("synthetic-test-passphrase", repr(candidate))
+                import win32api
+
+                short_root = Path(win32api.GetShortPathName(str(root)))
+                self.assertEqual(prepare_candidate(short_root, body).boundary, candidate.boundary)
                 for change in ({"key": "plain.pem"}, {"hostname": "other.example.test"}, {"cert": "../cert.pem"},
                                {"passphrase": "short"}):
                     with self.subTest(kind=tuple(change)), self.assertRaisesRegex(ValueError, "Private TLS settings unavailable"):
                         prepare_candidate(root, {**body, **change})
+                import win32con
+                import win32security
+
+                key_path = root / "key.pem"
+                descriptor = win32security.GetNamedSecurityInfo(str(key_path), win32security.SE_FILE_OBJECT,
+                                                                win32security.DACL_SECURITY_INFORMATION)
+                acl = descriptor.GetSecurityDescriptorDacl()
+                everyone = win32security.CreateWellKnownSid(win32security.WinWorldSid, None)
+                acl.AddAccessAllowedAce(win32security.ACL_REVISION, win32con.GENERIC_READ, everyone)
+                win32security.SetNamedSecurityInfo(str(key_path), win32security.SE_FILE_OBJECT,
+                    win32security.DACL_SECURITY_INFORMATION, None, None, acl, None)
+                with self.assertRaisesRegex(ValueError, "Private TLS settings unavailable"):
+                    prepare_candidate(root, body)
 
     def test_real_owner_api_protects_secret_and_does_not_enable_listener(self):
         fixture = tls_fixture.TlsIdentityTests
@@ -59,6 +78,7 @@ class PrivateSettingsPreparationTests(unittest.TestCase):
             tls_dir.mkdir()
             shutil.copyfile(fixture.cert, tls_dir / "cert.pem")
             shutil.copyfile(fixture.encrypted, tls_dir / "key.pem")
+            tls_acl.protect_fixture(tls_dir, tls_dir / "cert.pem", tls_dir / "key.pem")
             path = root / "context.db"
             initialize_database(path)
             with closing(sqlite3.connect(path)) as connection:
