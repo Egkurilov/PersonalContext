@@ -6,6 +6,9 @@ $ErrorActionPreference = 'Stop'
 $pcAddress = $env:PC_FIREWALL_ADDRESS
 $pcIp = @(Get-NetIPAddress -IPAddress $pcAddress | Where-Object { $_.AddressState -eq 'Preferred' })
 if ($pcIp.Count -ne 1) { throw 'interface unavailable' }
+$pcAdapter = @(Get-NetAdapter -InterfaceIndex $pcIp[0].InterfaceIndex)
+if ($pcAdapter.Count -ne 1 -or $pcAdapter[0].HardwareInterface -ne $true -or
+    $pcAdapter[0].Status.ToString() -ne 'Up') { throw 'physical interface unavailable' }
 $pcConnections = @(Get-NetConnectionProfile -InterfaceIndex $pcIp[0].InterfaceIndex)
 if ($pcConnections.Count -ne 1) { throw 'profile unavailable' }
 $pcName = $pcConnections[0].NetworkCategory.ToString()
@@ -55,7 +58,15 @@ $pcAgain = @(Get-NetConnectionProfile -InterfaceIndex $pcIp[0].InterfaceIndex)
 if ($pcAgain.Count -ne 1 -or $pcAgain[0].NetworkCategory.ToString() -ne $pcConnections[0].NetworkCategory.ToString()) {
     throw 'profile changed'
 }
-[ordered]@{profiles=@([ordered]@{name=$pcName; enabled=($pcProfile[0].Enabled.ToString() -eq 'True' -and
+$pcAgainIp = @(Get-NetIPAddress -IPAddress $pcAddress | Where-Object { $_.AddressState -eq 'Preferred' })
+$pcAgainAdapter = @(Get-NetAdapter -InterfaceIndex $pcIp[0].InterfaceIndex)
+if ($pcAgainIp.Count -ne 1 -or $pcAgainIp[0].InterfaceIndex -ne $pcIp[0].InterfaceIndex -or
+    $pcAgainIp[0].PrefixLength -ne $pcIp[0].PrefixLength -or $pcAgainAdapter.Count -ne 1 -or
+    $pcAgainAdapter[0].HardwareInterface -ne $true -or $pcAgainAdapter[0].Status.ToString() -ne 'Up') {
+    throw 'interface changed'
+}
+[ordered]@{interface=[ordered]@{prefix=[int]$pcIp[0].PrefixLength; physical=[bool]$pcAdapter[0].HardwareInterface; category=$pcName};
+    profiles=@([ordered]@{name=$pcName; enabled=($pcProfile[0].Enabled.ToString() -eq 'True' -and
     $pcProfile[0].AllowInboundRules.ToString() -eq 'True' -and $pcDisabled.Count -eq 0);
     inbound=$pcProfile[0].DefaultInboundAction.ToString()}); rules=@($pcItems)} | ConvertTo-Json -Depth 6 -Compress
 """

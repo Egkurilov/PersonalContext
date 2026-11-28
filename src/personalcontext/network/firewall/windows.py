@@ -11,20 +11,27 @@ from personalcontext.network.boundary import PrivateBoundary
 from personalcontext.network.firewall.model import FirewallProfile, FirewallRule
 from personalcontext.network.firewall.policy import firewall_allows_private_only
 from personalcontext.network.firewall.script import SCRIPT
+from personalcontext.network.lan.scope import local_lan_allowed
 
 
-def _parse(payload: object) -> tuple[list[FirewallProfile], list[FirewallRule]] | None:
+def _parse(payload: object, boundary: PrivateBoundary) -> tuple[list[FirewallProfile], list[FirewallRule]] | None:
     try:
-        if not isinstance(payload, dict) or payload.keys() != {"profiles", "rules"}:
+        if not isinstance(payload, dict) or payload.keys() != {"interface", "profiles", "rules"}:
+            return None
+        interface = payload["interface"]
+        if (not isinstance(interface, dict) or interface.keys() != {"prefix", "physical", "category"}
+                or not local_lan_allowed(boundary, interface["prefix"], interface["physical"], interface["category"])):
             return None
         profiles, rules = payload["profiles"], payload["rules"]
-        if not isinstance(profiles, list) or not isinstance(rules, list) or len(rules) > 4096:
+        if not isinstance(profiles, list) or len(profiles) != 1 or not isinstance(rules, list) or len(rules) > 4096:
             return None
         parsed_profiles = []
         for item in profiles:
             if not isinstance(item, dict) or item.keys() != {"name", "enabled", "inbound"}:
                 return None
             if not isinstance(item["name"], str) or type(item["enabled"]) is not bool or not isinstance(item["inbound"], str):
+                return None
+            if item["name"] != interface["category"]:
                 return None
             parsed_profiles.append(FirewallProfile(item["name"], item["enabled"], item["inbound"]))
         parsed_rules = []
@@ -60,7 +67,7 @@ def read_firewall_snapshot(boundary: PrivateBoundary) -> tuple[list[FirewallProf
                                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0), check=False)
         if result.returncode != 0 or not 0 < len(result.stdout) <= 4 * 1024 * 1024:
             return None
-        return _parse(json.loads(result.stdout.decode("utf-8-sig")))
+        return _parse(json.loads(result.stdout.decode("utf-8-sig")), boundary)
     except (OSError, subprocess.SubprocessError, KeyError, UnicodeError, ValueError):
         return None
 

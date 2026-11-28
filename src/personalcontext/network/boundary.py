@@ -4,7 +4,10 @@ import ipaddress
 import re
 from dataclasses import dataclass
 
-_PRIVATE = tuple(map(ipaddress.ip_network, ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10", "fc00::/7")))
+from personalcontext.network.lan.networks import LAN_NETWORKS, lan_ranges_allowed
+
+_PRIVATE = (*LAN_NETWORKS, ipaddress.ip_network("100.64.0.0/10"))
+
 _LABEL = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\Z")
 
 
@@ -58,6 +61,8 @@ def check_request(boundary: LocalBoundary | PrivateBoundary, peer: str | None, s
         valid_peer = peer == "127.0.0.1" and scheme == "http"
         valid_hosts = {"127.0.0.1", "127.0.0.1:17890"}
     elif isinstance(boundary, PrivateBoundary):
+        if not lan_ranges_allowed(boundary.address, boundary.peers):
+            return (403, "Forbidden")
         try:
             address = ipaddress.ip_address(peer or "")
             valid_peer = scheme == "https" and any(address in ipaddress.ip_network(net) for net in boundary.peers)

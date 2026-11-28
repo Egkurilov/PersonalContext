@@ -5,6 +5,7 @@ import threading
 from pathlib import Path
 
 from personalcontext.network.boundary import PrivateBoundary
+from personalcontext.network.lan.networks import lan_ranges_allowed
 from personalcontext.network.material.paths import validated_tls_material
 from personalcontext.network.private_settings import PrivateCandidate, valid_candidate
 from personalcontext.network.tls import vault_server_context
@@ -39,6 +40,8 @@ def _prepare_candidate(root: Path, body: dict[str, object]) -> PrivateCandidate:
         if not 16 <= len(phrase_bytes) <= 1024:
             raise ValueError("Invalid settings")
         boundary = PrivateBoundary.create(address, hostname, port, body["peers"])
+        if not lan_ranges_allowed(boundary.address, boundary.peers):
+            raise ValueError("Invalid settings")
         candidate = PrivateCandidate(boundary, cert_name, key_name, b"x")
         if not valid_candidate(candidate) or sys.platform != "win32":
             raise ValueError("Invalid settings")

@@ -12,7 +12,8 @@ class FirewallSnapshotTests(unittest.TestCase):
     def setUp(self):
         self.boundary = PrivateBoundary.create("192.168.7.2", "pc.example.test", 18443, ["192.168.7.0/24"])
         self.exe = r"C:\Apps\PersonalContext.exe"
-        self.snapshot = {"profiles": [{"name": "Private", "enabled": True, "inbound": "Block"}],
+        self.snapshot = {"interface": {"prefix": 24, "physical": True, "category": "Private"},
+                         "profiles": [{"name": "Private", "enabled": True, "inbound": "Block"}],
                          "rules": [{"profiles": ["Private"], "protocol": "TCP", "ports": ["18443"],
                                     "remote": ["192.168.7.0/24"], "local": ["Any"], "program": self.exe,
                                     "edge": "Block", "unrestricted": True}]}
@@ -43,6 +44,21 @@ class FirewallSnapshotTests(unittest.TestCase):
                   patch.dict("personalcontext.network.firewall.windows.os.environ", {"SystemRoot": r"C:\Windows"}),
                   patch("personalcontext.network.firewall.windows.subprocess.run", side_effect=failure)):
                 self.assertFalse(inspect_firewall(self.boundary, self.exe))
+
+    def test_nonlocal_virtual_and_unknown_interfaces_fail_closed(self):
+        for interface in ({"prefix": 25, "physical": True, "category": "Private"},
+                          {"prefix": 24, "physical": False, "category": "Private"},
+                          {"prefix": 24, "physical": True, "category": "Unknown"},
+                          {"prefix": True, "physical": True, "category": "Private"}):
+            with self.subTest(interface=interface):
+                self.assertFalse(self.call({**self.snapshot, "interface": interface}))
+
+    def test_public_profile_can_work_with_narrow_rule_but_mismatch_is_rejected(self):
+        public = {**self.snapshot, "interface": {"prefix": 24, "physical": True, "category": "Public"},
+                  "profiles": [{"name": "Public", "enabled": True, "inbound": "Block"}],
+                  "rules": [{**self.snapshot["rules"][0], "profiles": ["Public"]}]}
+        self.assertTrue(self.call(public))
+        self.assertFalse(self.call({**public, "interface": {"prefix": 24, "physical": True, "category": "Private"}}))
 
     def test_busy_or_unexpected_failure_reports_unavailable(self):
         self.assertTrue(_GATE.acquire(blocking=False))

@@ -12,8 +12,8 @@ requires a separately reviewed security contract.
 
 The same boundary module validates a prospective private HTTPS request against
 an explicit private bind address, canonical lower-case DNS hostname, port and
-up to 16 explicitly configured private peer networks. Allowed network ranges
-are RFC 1918, IPv6 ULA and shared VPN address space `100.64.0.0/10`. Wildcards,
+up to 16 explicitly configured private peer networks within the physical
+interface's actual local subnet. Allowed ranges are RFC 1918 and IPv6 ULA; VPN,
 public networks, malformed/ambiguous addresses, unlisted peers, HTTP, foreign
 Host/Origin and forwarding headers are rejected. These checks are unit tested;
 they do not establish TLS or change firewall rules.
@@ -102,7 +102,7 @@ and [Windows Filtering Platform overview](https://learn.microsoft.com/en-us/wind
 
 The separately opted-in private listener is experimental and off by default.
 Its [lifecycle notes](pc-002-listener-lifecycle.md) describe its owner controls,
-monitoring gaps, WFP permission limit and remaining LAN/VPN acceptance tests.
+monitoring gaps, WFP permission limit and remaining LAN acceptance tests.
 Never treat the request filter as a substitute for TLS, firewall or authentication.
 
 The Windows frozen smoke `scripts/smoke_frozen_network.py` inspects the
@@ -117,4 +117,4 @@ socket bound to an eligible private address on the same machine. It uses a
 synthetic pinned certificate and mocks TLS material/vault validation; the peer
 allowlist contains only that machine's address. The test skips when no eligible
 interface exists. It does not exercise listener activation, effective firewall
-filtering, a separate device, real certificate trust or LAN/VPN connectivity.
+filtering, a separate device, real certificate trust or LAN connectivity.

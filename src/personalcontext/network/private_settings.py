@@ -9,6 +9,7 @@ from typing import Literal
 from personalcontext.audit.record import record_audit
 from personalcontext.auth.owner_sessions import authorize_mutation
 from personalcontext.network.boundary import PrivateBoundary
+from personalcontext.network.lan.networks import lan_ranges_allowed
 
 _NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,119}\.pem\Z", re.IGNORECASE)
 _RESERVED = frozenset({"con", "prn", "aux", "nul", *(f"com{i}" for i in range(1, 10)), *(f"lpt{i}" for i in range(1, 10))})
@@ -75,6 +76,8 @@ def save_candidate(connection: sqlite3.Connection, token: object, csrf: object, 
             or type(now) is not int or not 0 <= now <= 2**53 - 1):
         return SettingsResult("invalid")
     assert isinstance(candidate, PrivateCandidate)
+    if not lan_ranges_allowed(candidate.boundary.address, candidate.boundary.peers):
+        return SettingsResult("invalid")
     connection.execute("BEGIN IMMEDIATE")
     if not authorize_mutation(connection, token, csrf, now):
         return SettingsResult("forbidden")

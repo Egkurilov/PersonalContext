@@ -4,7 +4,9 @@ The private listener is off on every process start. Its API and limitations are:
 
 1. A local owner with a valid session, exact Origin and CSRF explicitly asks to
    start the currently saved candidate by revision. Restart does not activate it.
-2. Before binding, check the selected interface and active firewall policy,
+2. Before binding, check that the selected interface is physical and up, every
+   permitted peer range is within its actual private subnet, and the active
+   firewall policy is restrictive. VPN and nonlocal ranges are excluded. Then
    validate the certificate and key under locked files, and repeat the owner
    authorization and revision checks. Failure, ambiguity, timeout or a port
    conflict must leave the local HTTP listener running and the private one off.
@@ -18,10 +20,14 @@ The private listener is off on every process start. Its API and limitations are:
    remain undetected until the next assessment completes; snapshots cannot see
    every Windows Filtering Platform rule. TLS and the per-request peer/Host/Origin
    checks remain independent, but the firewall state is not continuously proven.
-5. Synthetic tests start a real loopback TLS socket with mocked firewall and
-   reject an unlisted peer; they do not prove LAN routing or a real firewall.
+   Routers or bridges that present remote clients as local IPs cannot be
+   distinguished by these checks and require separate network controls.
+5. Synthetic tests start real TLS sockets on loopback and a private interface;
+   the latter exercises owner start, login and shutdown on an observed firewall
+   failure. Firewall and certificate-vault checks are mocked, and client and
+   server run on the same host, so this does not prove LAN routing or a real firewall.
    Remote client trust, allowed and disallowed peers, forged Host/Origin,
-   plaintext, port conflict, restart and shutdown still need real LAN/VPN tests.
+   plaintext, port conflict, restart and shutdown still need real LAN tests.
 
 `POST /api/v1/network/private/start` requires owner Origin, CSRF and the saved
 revision in JSON; `POST /api/v1/network/private/stop` requires the same owner

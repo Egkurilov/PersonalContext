@@ -29,7 +29,7 @@ def private_address():
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
             probe.connect(("192.0.2.1", 9))
             address = ipaddress.ip_address(probe.getsockname()[0])
-        allowed = ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10")
+        allowed = ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")
         return str(address) if any(address in ipaddress.ip_network(net) for net in allowed) else None
     except OSError:
         return None

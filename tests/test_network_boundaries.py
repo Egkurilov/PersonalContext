@@ -46,10 +46,11 @@ class NetworkBoundaryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             PrivateBoundary("192.168.1.2", "pc.example.test", 18443, ["192.168.1.0/24"])
 
-    def test_private_ipv6_and_vpn_ranges_are_explicit_and_family_bound(self):
-        boundary = PrivateBoundary.create("fd00::1", "pc.example.test", 18443, ["fd00::/64", "100.64.0.0/10"])
+    def test_private_ipv6_is_family_bound_and_vpn_range_is_rejected(self):
+        boundary = PrivateBoundary.create("fd00::1", "pc.example.test", 18443, ["fd00::/64"])
         self.assertIsNone(check_request(boundary, "fd00::2", "https", ["pc.example.test:18443"], [], []))
-        self.assertIsNone(check_request(boundary, "100.100.1.2", "https", ["pc.example.test:18443"], [], []))
+        legacy = PrivateBoundary.create("100.100.1.2", "pc.example.test", 18443, ["100.64.0.0/10"])
+        self.assertEqual(check_request(legacy, "100.100.1.3", "https", ["pc.example.test:18443"], [], [])[0], 403)
         for peer in ("fd00:1::2", "::ffff:100.100.1.2", "127.0.0.1", "8.8.8.8", "unknown", None):
             with self.subTest(peer=peer):
                 self.assertEqual(check_request(boundary, peer, "https", ["pc.example.test:18443"], [], [])[0], 403)
