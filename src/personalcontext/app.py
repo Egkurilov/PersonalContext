@@ -7,29 +7,19 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from personalcontext.audit.http_routes import router as audit_router
+from personalcontext.api.routing.registry import register_routes
 from personalcontext.audit.retention import AuditHousekeeping
-from personalcontext.auth.http_routes import router as auth_router
 from personalcontext.auth.owner_bootstrap import OwnerBootstrap
 from personalcontext.auth.owner_login import OwnerLogin
 from personalcontext.auth.password_executor import PasswordExecutor
-from personalcontext.auth.rotation_http import router as rotation_router
 from personalcontext.contracts.health import HealthResponse, ReadinessResponse
 from personalcontext.demo.seed import DemoResponse, seed_demo
-from personalcontext.devices.device_http import router as device_access_router
-from personalcontext.devices.extension_http import router as extension_router
-from personalcontext.devices.http_routes import router as device_router
 from personalcontext.jobs.scheduler import Scheduler
-from personalcontext.mcp_auth.http import router as mcp_auth_router
-from personalcontext.network.firewall.http import router as firewall_router
+from personalcontext.network.listener.fail_closed import failure_callback
+from personalcontext.network.listener.manager import PrivateListener
 from personalcontext.network.middleware import restrict_requests
 from personalcontext.network.protocols.websocket import RejectWebSockets
-from personalcontext.network.settings_http import router as private_settings_router
-from personalcontext.privacy.http_routes import router as privacy_router
-from personalcontext.privacy.preview_routes import router as preview_router
 from personalcontext.privacy.runtime.latch import CaptureLatch
-from personalcontext.sources.config_http import router as config_router
-from personalcontext.sources.http_routes import router as sources_router
 from personalcontext.storage.initialize import initialize_database
 
 
@@ -40,9 +30,10 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
         app.state.capture_latch = CaptureLatch()
         if demo:
             app.state.demo_response = seed_demo(database_path)
-        scheduler = Scheduler(database_path, {}, on_storage_failure=app.state.capture_latch.pause)
+        fail_closed = failure_callback(app, app.state.capture_latch)
+        scheduler = Scheduler(database_path, {}, on_storage_failure=fail_closed)
         executor = PasswordExecutor()
-        audit_housekeeping = AuditHousekeeping(scheduler.writer, on_failure=app.state.capture_latch.pause)
+        audit_housekeeping = AuditHousekeeping(scheduler.writer, on_failure=fail_closed)
         try:
             await scheduler.start()
             await audit_housekeeping.start()
@@ -54,6 +45,7 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
             await scheduler.stop()
             raise
         app.state.scheduler = scheduler
+        app.state.private_listener = PrivateListener(app, scheduler.writer, app.state.private_tls_dir)
         app.state.audit_housekeeping = audit_housekeeping
         app.state.loop = asyncio.get_running_loop()
         app.state.ready = True
@@ -61,6 +53,7 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
             yield
         finally:
             app.state.ready = False
+            await app.state.private_listener.stop()
             app.state.capture_latch.pause()
             await asyncio.to_thread(app.state.capture_latch.drain, 10)
             await audit_housekeeping.stop()
@@ -69,19 +62,7 @@ def create_app(database_path: Path, web_root: Path | None = None, *, demo: bool 
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.private_tls_dir = database_path.parent / "tls"
-    app.include_router(auth_router)
-    app.include_router(rotation_router)
-    app.include_router(audit_router)
-    app.include_router(mcp_auth_router)
-    app.include_router(device_router)
-    app.include_router(device_access_router)
-    app.include_router(extension_router)
-    app.include_router(privacy_router)
-    app.include_router(preview_router)
-    app.include_router(config_router)
-    app.include_router(sources_router)
-    app.include_router(private_settings_router)
-    app.include_router(firewall_router)
+    register_routes(app)
     app.add_middleware(RejectWebSockets)
 
     app.middleware("http")(restrict_requests)

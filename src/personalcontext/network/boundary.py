@@ -47,7 +47,8 @@ class PrivateBoundary:
 
 def expected_origin(boundary: LocalBoundary | PrivateBoundary) -> str:
     if isinstance(boundary, PrivateBoundary):
-        return f"https://{boundary.hostname}:{boundary.port}"
+        suffix = "" if boundary.port == 443 else f":{boundary.port}"
+        return f"https://{boundary.hostname}{suffix}"
     return "http://127.0.0.1:17890"
 
 
@@ -63,6 +64,8 @@ def check_request(boundary: LocalBoundary | PrivateBoundary, peer: str | None, s
         except ValueError:
             valid_peer = False
         valid_hosts = {f"{boundary.hostname}:{boundary.port}"}
+        if boundary.port == 443:
+            valid_hosts.add(boundary.hostname)
     else:
         return (403, "Forbidden")
     if not valid_peer:

@@ -33,6 +33,6 @@ class PrivateSettingsMigrationTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "private settings or audit history"):
                 command.downgrade(config, "0011")
             with closing(sqlite3.connect(path)) as connection:
-                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone(), ("0014",))
+                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone(), ("0015",))
                 rows = connection.execute("SELECT event_type FROM security_audit ORDER BY id").fetchall()
                 self.assertEqual(rows, [("owner_session_rotate",), ("private_config_update",)])

@@ -1,6 +1,6 @@
 # PC-002 private listener lifecycle
 
-The private listener is currently unavailable. Its activation contract is:
+The private listener is off on every process start. Its API and limitations are:
 
 1. A local owner with a valid session, exact Origin and CSRF explicitly asks to
    start the currently saved candidate by revision. Restart does not activate it.
@@ -9,15 +9,33 @@ The private listener is currently unavailable. Its activation contract is:
    authorization and revision checks. Failure, ambiguity, timeout or a port
    conflict must leave the local HTTP listener running and the private one off.
 3. A settings change must not race an active or starting listener. Stop and
-   process shutdown close the socket and all private requests. The listener must
+   process shutdown close the listening socket and request active connections
+   to close; in-flight work may take time to finish. The listener must
    not enable forwarding headers, plaintext HTTP, wildcard binding or capture.
-4. Changes in interface or firewall policy must cause private access to stop.
-   A point-in-time rule snapshot is not a durable guarantee: the implementation
-   must explain and test how it handles changes and cannot present a diagnostic
-   result as proof of continuously effective Windows Filtering Platform policy.
-5. Remote client certificate trust, allowed and disallowed peers, forged
-   Host/Origin, plaintext, port conflict, restart and shutdown require real
-   platform acceptance in addition to synthetic tests.
+4. A monitor repeats the firewall assessment after 15-second waits. The snapshot
+   itself may take up to 45 seconds. A non-restricted or unavailable assessment,
+   a failed security worker or an exited server closes the listener. Changes may
+   remain undetected until the next assessment completes; snapshots cannot see
+   every Windows Filtering Platform rule. TLS and the per-request peer/Host/Origin
+   checks remain independent, but the firewall state is not continuously proven.
+5. Synthetic tests start a real loopback TLS socket with mocked firewall and
+   reject an unlisted peer; they do not prove LAN routing or a real firewall.
+   Remote client trust, allowed and disallowed peers, forged Host/Origin,
+   plaintext, port conflict, restart and shutdown still need real LAN/VPN tests.
+
+`POST /api/v1/network/private/start` requires owner Origin, CSRF and the saved
+revision in JSON; `POST /api/v1/network/private/stop` requires the same owner
+authorization. Both are local-only. Start makes two firewall assessments around
+TLS preparation, then rechecks the owner and revision before binding. Each
+firewall assessment has a 45-second subprocess timeout, so start can take more
+than a minute; no database transaction is held during those checks. A stop
+cancels a pending preflight without waiting for its background worker. Changes
+to the candidate are rejected while startup or the listener owns the lifecycle
+lock. The `private_listener_attempt` and `private_listener_stop` audit categories
+contain no addresses or request data; an attempt records an authorized attempt,
+not a guarantee that startup succeeded. If audit storage fails, stop still closes
+the listener, but its audit event may be unavailable. Migration `0015` adds the
+categories and rejects downgrade if their history would be lost.
 
 `python scripts/check_wfp_subscription.py` performs a read-only, short-lived
 attempt to subscribe to all WFP filter additions and deletions and immediately

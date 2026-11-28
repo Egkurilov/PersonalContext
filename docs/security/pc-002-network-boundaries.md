@@ -1,6 +1,6 @@
 # PC-002 network boundaries
 
-The running listener is still exactly `127.0.0.1:17890` over HTTP. Its request
+The default listener is exactly `127.0.0.1:17890` over HTTP. Its request
 boundary checks the actual ASGI peer, HTTP scheme, exact Host and optional
 Origin and rejects forwarding headers. Uvicorn proxy-header interpretation is
 disabled. Existing CSRF and authentication checks remain separate.
@@ -37,9 +37,9 @@ resulting TLS context is kept in memory; this is a preparation check, not a
 firewall or lifecycle guarantee. It does not bind or start a socket. A synthetic test runs it on loopback: a real TLS
 connection with a synthetic certificate succeeds cryptographically but is denied as an unlisted peer even
 with a forged forwarding header; plaintext HTTP is not accepted. This is not a
-LAN acceptance test. Before any actual start the caller must validate the
-effective firewall, bind the selected interface and arrange
-safe lifecycle and failure handling.
+LAN acceptance test. The explicit owner start path described in the listener
+lifecycle notes uses this configuration after checking the firewall and binds
+the selected private interface.
 
 An offline TLS helper loads a certificate and matching private key into a server
 context and performs a bounded in-memory TLS handshake against Python's default
@@ -76,8 +76,8 @@ replacement or changing ownership/DACL; read-only access to ancestors is allowed
 Reparse-point ancestors, null DACLs and unsupported effective ACE types are
 rejected. These conservative checks may reject otherwise safe ACLs; they do not
 defeat administrators or prevent a trusted owner from changing files after
-preflight. Listener activation and a settings UI remain unimplemented;
-call the configuration recheck at actual startup. See Microsoft's
+preflight. Listener activation is available through the local owner API, but a
+settings UI and real LAN acceptance remain unimplemented. See Microsoft's
 [DACL guidance](https://learn.microsoft.com/en-us/windows/win32/secauthz/dacls-and-aces)
 and [null DACL behavior](https://learn.microsoft.com/en-us/windows/win32/secauthz/null-dacls-and-empty-dacls).
 
@@ -100,10 +100,7 @@ durable permission to start or keep a listener running. Rule details are not
 logged or returned. See Microsoft's [active policy store description](https://learn.microsoft.com/en-us/powershell/module/netsecurity/get-netfirewallrule)
 and [Windows Filtering Platform overview](https://learn.microsoft.com/en-us/windows/win32/fwp/about-windows-filtering-platform).
 
-Private access is not wired to an active listener or settings UI and is not available yet.
-Before enabling it, implement and verify certificate and key storage, client
-trust, selected local interface binding, firewall restrictions, HTTPS
-session cookies, owner opt-in, lifecycle and real LAN/VPN negative tests. Never
-use this request filter as a substitute for TLS, firewall or authentication.
-The [listener lifecycle notes](pc-002-listener-lifecycle.md) include a read-only
-WFP subscription probe and its observed non-elevated permission limit.
+The separately opted-in private listener is experimental and off by default.
+Its [lifecycle notes](pc-002-listener-lifecycle.md) describe its owner controls,
+monitoring gaps, WFP permission limit and remaining LAN/VPN acceptance tests.
+Never treat the request filter as a substitute for TLS, firewall or authentication.

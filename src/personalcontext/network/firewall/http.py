@@ -45,4 +45,5 @@ async def check(request: Request) -> Response:
         return error(403, "forbidden")
     if current_status != "ok" or current != candidate:
         return error(409, "changed")
-    return JSONResponse({"firewall": result, "enabled": False}, headers={"Cache-Control": "no-store"})
+    return JSONResponse({"firewall": result, "enabled": request.app.state.private_listener.active()},
+                        headers={"Cache-Control": "no-store"})

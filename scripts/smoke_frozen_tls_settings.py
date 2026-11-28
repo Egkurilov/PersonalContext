@@ -13,7 +13,7 @@ import tempfile
 import time
 from contextlib import closing
 from pathlib import Path
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib.request import HTTPCookieProcessor, Request, build_opener
 
 from personalcontext.auth.bootstrap_store import issue_bootstrap
@@ -80,6 +80,14 @@ def main():
                 with opener.open(ORIGIN + "/api/v1/network/private/config", timeout=5) as response:
                     value = json.load(response)
                     assert value["configured"] and value["enabled"] is False
+                try:
+                    post("/api/v1/network/private/start", {"revision": 2}, csrf)
+                except HTTPError as error:
+                    assert error.code == 409
+                else:
+                    raise AssertionError("Stale private configuration started")
+                with post("/api/v1/network/private/stop", {}, csrf) as response:
+                    assert response.status == 204
                 with post("/api/v1/network/private/firewall/check", {}, csrf) as response:
                     value = json.load(response)
                     assert value["firewall"] in ("unavailable", "not_restricted", "restricted") and value["enabled"] is False

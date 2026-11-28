@@ -41,7 +41,7 @@ async def get_config(request: Request) -> Response:
     if corrupted:
         return error(503, "unavailable")
     value: dict[str, object] = {"configured": candidate is not None, "revision": candidate.revision if candidate else 0,
-                                "enabled": False}
+                                "enabled": request.app.state.private_listener.active()}
     if candidate is not None:
         item, boundary = candidate.candidate, candidate.candidate.boundary
         value["settings"] = {"address": boundary.address, "hostname": boundary.hostname, "port": boundary.port,
@@ -66,9 +66,12 @@ async def set_config(request: Request) -> Response:
         if body is None or type(body.get("revision")) is not int:
             return error(400, "invalid_request")
         candidate = await asyncio.to_thread(prepare_candidate, request.app.state.private_tls_dir, body)
-        result = await request.app.state.scheduler.writer.submit(
-            lambda connection: save_candidate(connection, token, csrf, body["revision"], candidate, int(time.time())),
-        )
+        async with request.app.state.private_listener.lock:
+            if request.app.state.private_listener.server is not None:
+                return error(409, "listener_active")
+            result = await request.app.state.scheduler.writer.submit(
+                lambda connection: save_candidate(connection, token, csrf, body["revision"], candidate, int(time.time())),
+            )
     except OverflowError:
         return error(413, "request_too_large")
     except ValueError:

@@ -53,3 +53,10 @@ class NetworkBoundaryTests(unittest.TestCase):
         for peer in ("fd00:1::2", "::ffff:100.100.1.2", "127.0.0.1", "8.8.8.8", "unknown", None):
             with self.subTest(peer=peer):
                 self.assertEqual(check_request(boundary, peer, "https", ["pc.example.test:18443"], [], [])[0], 403)
+
+    def test_default_https_port_accepts_canonical_browser_origin(self):
+        boundary = PrivateBoundary.create("192.168.7.2", "pc.example.test", 443, ["192.168.7.0/24"])
+        for host in ("pc.example.test", "pc.example.test:443"):
+            self.assertIsNone(check_request(boundary, "192.168.7.9", "https", [host], ["https://pc.example.test"], []))
+        self.assertEqual(check_request(boundary, "192.168.7.9", "https", ["attacker.test"], [], [])[0], 400)
+        self.assertEqual(check_request(boundary, "192.168.7.9", "https", ["pc.example.test"], ["https://attacker.test"], [])[0], 403)
