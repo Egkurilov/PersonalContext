@@ -28,5 +28,5 @@ class McpMigrationTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 command.downgrade(config, "0013")
             with closing(sqlite3.connect(path)) as connection:
-                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0017")
+                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0018")
                 self.assertEqual(connection.execute("SELECT count(*) FROM mcp_credentials").fetchone()[0], 1)
