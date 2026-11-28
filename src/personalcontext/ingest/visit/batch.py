@@ -1,13 +1,20 @@
 """Bounded internal batches; caller must supply a trusted classification context."""
 
 import json
+import sqlite3
 from collections.abc import Callable
-from datetime import datetime
+from datetime import UTC, datetime
 
-from personalcontext.ingest.visit.service import VisitResult, submit_web_visit
+from pydantic import ValidationError
+
+from personalcontext.ingest.visit.model import WebVisit
+from personalcontext.ingest.visit.service import VisitResult, _record
+from personalcontext.jobs.capture_commit import submit_capture
 from personalcontext.jobs.writer import Writer
+from personalcontext.privacy.capture_policy import CaptureRequest
+from personalcontext.privacy.runtime.authorization import device_policy_allows
 from personalcontext.privacy.runtime.latch import CaptureLatch
-from personalcontext.privacy.sanitizer.rules import SanitizerContext
+from personalcontext.privacy.sanitizer.rules import SanitizerContext, valid_context
 
 _MAX_BYTES = 1024 * 1024
 _MAX_ITEMS = 100
@@ -45,10 +52,39 @@ def _parse(raw: object) -> list[object]:
 async def submit_visit_batch(writer: Writer, latch: CaptureLatch, token: object, device_id: object, raw: object,
                              context: SanitizerContext, *, origin: object = None,
                              clock: Callable[[], datetime] | None = None) -> list[VisitResult]:
-    """Each result follows its own durable commit; an interrupted batch can be retried."""
+    """Commit the batch atomically; no result is returned before durable commit."""
     values = _parse(raw)
-    results: list[VisitResult] = []
+    if not values:
+        return []
+    events: list[WebVisit | None] = []
     for value in values:
-        result = await submit_web_visit(writer, latch, token, device_id, value, context, origin=origin, clock=clock)
-        results.append(result)
-    return results
+        try:
+            event = WebVisit.model_validate(value) if type(value) is dict else None
+        except (ValidationError, ValueError, TypeError):
+            event = None
+        events.append(event if event is not None and event.device_id == device_id else None)
+    if not valid_context(context):
+        return ["rejected"] * len(events)
+    now = clock or (lambda: datetime.now(UTC))
+    authorized: list[CaptureRequest] = []
+
+    def allowed(connection: sqlite3.Connection, request: CaptureRequest) -> bool:
+        return device_policy_allows(connection, token=token, device_id=device_id, request=request,
+                                    latch=latch, origin=origin, clock=now)
+
+    def execute(connection: sqlite3.Connection) -> list[VisitResult]:
+        results: list[VisitResult] = []
+        for event in events:
+            if event is None:
+                results.append("rejected")
+                continue
+            request = CaptureRequest(event.source_id, event.consent_scope, event.policy_version,
+                                     context.private, context.sensitivity)
+            outcome = _record(connection, event, request, context, latch, now) if allowed(connection, request) else None
+            results.append(outcome if outcome is not None else "rejected")
+            if outcome is not None:
+                authorized.append(request)
+        return results
+
+    result = await submit_capture(writer, latch, execute, lambda c: all(allowed(c, item) for item in authorized))
+    return result if result is not None else ["rejected"] * len(events)

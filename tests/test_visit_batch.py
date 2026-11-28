@@ -6,11 +6,13 @@ import sqlite3
 import unittest
 import uuid
 from datetime import UTC, datetime
+from unittest.mock import patch
 
 import test_web_visit_guards as fixture
 from test_web_visit_ledger import synthetic_event
 
 from personalcontext.ingest.visit.batch import InvalidBatch, submit_visit_batch
+from personalcontext.privacy.runtime.authorization import device_policy_allows
 from personalcontext.privacy.sanitizer.rules import SanitizerContext
 
 
@@ -58,7 +60,7 @@ class VisitBatchTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self.send(json.dumps([forged, event]).encode()), ["rejected", "accepted"])
         self.assertEqual(await self.counts(), (1, 1))
 
-    async def test_partial_commit_retry_after_storage_failure(self):
+    async def test_batch_rollback_retry_after_storage_failure(self):
         await self.prepare()
         event = synthetic_event(self.devices[0].device_id, self.source)
         second = {**event, "event_id": str(uuid.uuid4()), "source_event_key": "fail-once"}
@@ -68,10 +70,25 @@ class VisitBatchTests(unittest.IsolatedAsyncioTestCase):
             "BEGIN SELECT RAISE(ABORT,'synthetic failure'); END"))
         with self.assertRaises(sqlite3.IntegrityError):
             await self.send(raw)
-        self.assertEqual(await self.counts(), (1, 1))
+        self.assertEqual(await self.counts(), (0, 0))
         self.assertTrue(self.latch.is_paused())
         await self.writer.submit(lambda c: c.execute("DROP TRIGGER batch_failure"))
         self.assertTrue(self.latch.drain())
         self.assertTrue(self.latch.resume_if_unchanged(self.latch.generation()))
-        self.assertEqual(await self.send(raw), ["duplicate", "accepted"])
+        self.assertEqual(await self.send(raw), ["accepted", "accepted"])
         self.assertEqual(await self.counts(), (2, 2))
+
+    async def test_authorization_change_before_commit_rolls_back(self):
+        await self.prepare()
+        event = synthetic_event(self.devices[0].device_id, self.source)
+        calls = 0
+
+        def revoke_at_commit(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            return device_policy_allows(*args, **kwargs) if calls == 1 else False
+
+        with patch("personalcontext.ingest.visit.batch.device_policy_allows", side_effect=revoke_at_commit):
+            self.assertEqual(await self.send(json.dumps([event]).encode()), ["rejected"])
+        self.assertEqual(calls, 2)
+        self.assertEqual(await self.counts(), (0, 0))
