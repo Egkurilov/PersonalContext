@@ -1,6 +1,7 @@
-import subprocess
 import winreg
 from pathlib import Path
+
+from installer_process import run_installer
 
 
 def verify_downgrade_guard(command: list[str], uninstall_key: str, install_dir: Path) -> None:
@@ -14,10 +15,10 @@ def verify_downgrade_guard(command: list[str], uninstall_key: str, install_dir: 
         version, value_type = winreg.QueryValueEx(key, "DisplayVersion")
     try:
         set_version("0.0.1", winreg.REG_SZ)
-        subprocess.run(command, capture_output=True, timeout=120, check=True)
+        run_installer(command, check=True)
         for synthetic_version in ("99.0.0", "invalid"):
             set_version(synthetic_version, winreg.REG_SZ)
-            result = subprocess.run(command, capture_output=True, timeout=120, check=False)
+            result = run_installer(command, check=False)
             if result.returncode == 0 or executable.read_bytes() != original:
                 raise RuntimeError("Installer did not reject unsafe version replacement")
     finally:
