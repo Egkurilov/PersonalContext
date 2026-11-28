@@ -15,6 +15,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import HTTPCookieProcessor, Request, build_opener
 
 from smoke_local_credentials import check_local_credentials
+from smoke_policy_restart import restart_and_check
 from smoke_privacy_filters import check_filters
 
 from personalcontext.auth.bootstrap_store import issue_bootstrap
@@ -22,7 +23,6 @@ from personalcontext.storage.initialize import initialize_database
 
 ORIGIN = "http://127.0.0.1:17890"
 CANDIDATE = "synthetic frozen password"
-
 def main():
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 17890))
@@ -81,6 +81,7 @@ def main():
             with opener.open(request, timeout=5) as response:
                 result = json.load(response)
                 assert result["version"] == 3 and result["local_paused"] is False
+            process = restart_and_check(process, executable, env, opener, ORIGIN)
             with post("/api/v1/privacy/pause", {}, csrf) as response:
                 assert response.status == 204
             with opener.open(ORIGIN + "/api/v1/privacy/policy", timeout=5) as response:
@@ -115,6 +116,5 @@ def main():
         finally:
             process.terminate()
             process.wait(timeout=10)
-
 if __name__ == "__main__":
     main()
