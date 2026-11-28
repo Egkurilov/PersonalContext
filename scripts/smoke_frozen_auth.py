@@ -14,7 +14,7 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import HTTPCookieProcessor, Request, build_opener
 
-from smoke_extension_pairing import check_extension
+from smoke_local_credentials import check_local_credentials
 
 from personalcontext.auth.bootstrap_store import issue_bootstrap
 from personalcontext.storage.initialize import initialize_database
@@ -67,7 +67,7 @@ def main():
                 csrf = json.load(response)["csrf"]
             with post("/api/v1/auth/rotate", {}, csrf) as response:
                 csrf = json.load(response)["csrf"]
-            check_extension(opener, ORIGIN, csrf)
+            check_local_credentials(opener, ORIGIN, csrf)
             preview = {"kind": "web", "source": "example.org",
                        "data": {"url": "https://example.org/article?tracking=synthetic"}}
             with post("/api/v1/privacy/preview", preview, csrf) as response:

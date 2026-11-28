@@ -31,7 +31,7 @@ class ExtensionMigrationTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 command.downgrade(config, "0012")
             with closing(sqlite3.connect(path)) as connection:
-                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0013")
+                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0014")
                 self.assertEqual(connection.execute("SELECT count(*) FROM extension_devices").fetchone()[0], 1)
 
     def test_missing_binding_table_in_current_schema_is_not_a_native_grant(self):
