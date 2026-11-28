@@ -60,15 +60,15 @@ def enroll(connection: sqlite3.Connection, code: object, now: int, origin: objec
     if row is None:
         return None
     binding = pairing_origin(connection, digest)
-    if (binding is None and origin is not None) or (binding is not None and
-            (not valid_origin(binding[0]) or binding[0] != origin)):
-        return None
     owner_hash, mask, issued, expires = row
     if (not isinstance(owner_hash, bytes) or len(owner_hash) != 32 or type(mask) is not int or not 1 <= mask <= 7
             or not is_supported_hash(owner) or type(issued) is not int or type(expires) is not int or not _valid_time(issued)
             or expires != issued + 300 or not issued <= now < expires
             or owner is None or not hmac.compare_digest(owner_hash, hashlib.sha256(owner.encode("ascii")).digest())):
         connection.execute("DELETE FROM pairing_codes WHERE code_hash=?", (digest,))
+        return None
+    if (binding is None and origin is not None) or (binding is not None and
+            (not valid_origin(binding[0]) or binding[0] != origin)):
         return None
     device_id, token = str(uuid.uuid4()), secrets.token_urlsafe(32)
     connection.execute("INSERT INTO devices(device_id,token_hash,scope_mask,created_at) VALUES (?,?,?,?)",

@@ -77,6 +77,20 @@ class McpCredentialHttpTests(unittest.TestCase):
             self.assertEqual(self.client.get(STATUS, headers=bearer).status_code, 401)
         self.assertEqual(self.client.get(STATUS, headers=bearer).status_code, 401)
 
+    def test_observed_clock_rewind_permanently_invalidates_token(self):
+        token = self.issue().json()["token"]
+        bearer = {"Authorization": "Bearer " + token}
+        now = int(time.time())
+        with patch("personalcontext.mcp_auth.http.time.time", return_value=now + 10):
+            self.assertEqual(self.client.get(STATUS, headers=bearer).status_code, 200)
+        with patch("personalcontext.mcp_auth.http.time.time", return_value=now + 5):
+            self.assertEqual(self.client.get(STATUS, headers=bearer).status_code, 401)
+        self.client.__exit__(None, None, None)
+        self.client = TestClient(create_app(self.path), base_url=fixture.ORIGIN, client=("127.0.0.1", 1000))
+        self.client.__enter__()
+        with patch("personalcontext.mcp_auth.http.time.time", return_value=now + 11):
+            self.assertEqual(self.client.get(STATUS, headers=bearer).status_code, 401)
+
     def test_restore_discards_tokens_and_audit_never_contains_them(self):
         token = self.issue().json()["token"]
         audit = self.client.get("/api/v1/audit")

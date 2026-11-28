@@ -16,8 +16,10 @@ tokens likewise cannot authorize owner or device endpoints. Both MCP management
 and status endpoints are loopback-only and reject the prospective private
 transport. The owner may revoke by credential ID using the CSRF-protected local
 API; revocation takes effect on the next request. Observed expiry and clock
-rollback cannot revive a token. Normal process restart retains an unexpired
-credential; restoring a backup deletes all MCP credentials.
+rollback delete the credential in the writer transaction; after commit, a
+subsequent clock correction or restart cannot revive it. Rollback that is not
+observed during a request cannot be detected. Normal process restart retains an
+unexpired credential; restoring a backup deletes all MCP credentials.
 
 Migration `0014` adds verifiers and fixed audit categories without token or
 payload content. Downgrade refuses to discard credential records or their audit

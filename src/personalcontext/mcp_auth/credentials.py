@@ -50,10 +50,13 @@ def authorize(connection: sqlite3.Connection, token: object, scope: object, now:
     identifier, actual, issued, expires, last_seen, revoked = row
     if (not valid_device_id(identifier) or actual != scope or not _time(issued) or type(expires) is not int
             or expires != issued + _TTL or type(last_seen) is not int or last_seen < issued
-            or revoked is not None or now < last_seen):
+            or revoked is not None):
+        return False
+    if now < last_seen or not issued <= now < expires:
+        connection.execute("DELETE FROM mcp_credentials WHERE token_hash=?", (digest,))
         return False
     connection.execute("UPDATE mcp_credentials SET last_seen=? WHERE id=?", (now, identifier))
-    return bool(issued <= now < expires)
+    return True
 
 
 def revoke(connection: sqlite3.Connection, owner: object, csrf: object, identifier: object, now: int) -> bool:
