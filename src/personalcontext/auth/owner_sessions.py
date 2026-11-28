@@ -45,8 +45,8 @@ def create_session(connection: sqlite3.Connection, expected_hash: str, now: int)
         return None
     token, csrf = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
     connection.execute(
-        "INSERT INTO owner_sessions(token_hash,csrf_hash,credential_hash,issued_at,expires_at) VALUES (?,?,?,?,?)",
-        (_digest(token), _digest(csrf), hashlib.sha256(expected_hash.encode("ascii")).digest(), now, now + _LIFETIME),
+        "INSERT INTO owner_sessions(token_hash,csrf_hash,credential_hash,issued_at,expires_at,last_seen) VALUES (?,?,?,?,?,?)",
+        (_digest(token), _digest(csrf), hashlib.sha256(expected_hash.encode("ascii")).digest(), now, now + _LIFETIME, now),
     )
     record_audit(connection, "owner_login", "owner", now)
     return SessionSecrets(token=token, csrf=csrf)
@@ -57,12 +57,13 @@ def _session(connection: sqlite3.Connection, token: object, now: int) -> bytes |
     if digest is None or not _valid_time(now):
         return None
     row = connection.execute(
-        "SELECT csrf_hash,credential_hash,issued_at,expires_at FROM owner_sessions WHERE token_hash=?", (digest,),
+        "SELECT csrf_hash,credential_hash,issued_at,expires_at,last_seen FROM owner_sessions WHERE token_hash=?", (digest,),
     ).fetchone()
     if row is None:
         return None
-    csrf_hash, credential_hash, issued, expires = row
-    if type(issued) is int and type(expires) is int and not issued <= now < expires:
+    csrf_hash, credential_hash, issued, expires, last_seen = row
+    if (type(issued) is not int or type(expires) is not int or type(last_seen) is not int
+            or not issued <= last_seen < expires or now < last_seen or now >= expires):
         connection.execute("DELETE FROM owner_sessions WHERE token_hash=?", (digest,))
         return None
     current = find_owner_hash(connection)
@@ -75,6 +76,8 @@ def _session(connection: sqlite3.Connection, token: object, now: int) -> bytes |
     assert current is not None
     if not hmac.compare_digest(credential_hash, hashlib.sha256(current.encode("ascii")).digest()):
         return None
+    if now > last_seen:
+        connection.execute("UPDATE owner_sessions SET last_seen=? WHERE token_hash=?", (now, digest))
     return csrf_hash
 
 

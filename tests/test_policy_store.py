@@ -72,7 +72,8 @@ class PolicyStoreTests(unittest.IsolatedAsyncioTestCase):
             draft = PolicyDraft(False, ttl, self.draft.allowed, self.draft.denied, self.draft.grants)
             self.assertEqual((await self.save(draft)).status, "invalid")
         self.assertEqual((await self.save()).status, "ok")
-        self.assertEqual((await self.save(version=2, now=1009)).status, "invalid")
+        self.assertEqual((await self.save(version=2, now=1009)).status, "forbidden")
+        self.assertEqual((await self.save(version=2, now=1011)).status, "forbidden")
 
     async def test_corrupt_policy_is_denied_and_cannot_be_overwritten(self):
         self.assertEqual((await self.save()).status, "ok")

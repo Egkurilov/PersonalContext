@@ -10,9 +10,8 @@ from alembic.config import Config
 from sqlalchemy.engine import URL
 
 from personalcontext.auth.bootstrap_store import consume_bootstrap, issue_bootstrap
-from personalcontext.auth.owner_sessions import create_session
 from personalcontext.auth.password_hash import hash_password
-from personalcontext.privacy.policy_store import PolicyDraft, load_policy, save_policy
+from personalcontext.privacy.policy_store import load_policy
 from personalcontext.storage.initialize import initialize_database
 from personalcontext.storage.restore import restore_backup
 
@@ -34,16 +33,15 @@ class AuditMigrationTests(unittest.TestCase):
                 connection.commit()
                 consume_bootstrap(connection, code, encoded, 1001)
                 connection.commit()
-                owner = create_session(connection, encoded, 1002)
-                connection.commit()
-                draft = PolicyDraft(False, 600, frozenset({"synthetic-source"}), frozenset(),
-                                    frozenset({("synthetic-source", "metadata")}))
-                self.assertEqual(save_policy(connection, owner.token, owner.csrf, 1, draft, 1003).status, "ok")
+                connection.execute("UPDATE capture_policy SET version=2,issued_at=1003,expires_at=1603,paused=0")
+                connection.execute("INSERT INTO capture_policy_sources VALUES ('synthetic-source', 'allow')")
+                connection.execute("INSERT INTO capture_policy_grants VALUES ('synthetic-source', 'metadata')")
                 connection.commit()
             initialize_database(path)
             with closing(sqlite3.connect(path)) as connection:
-                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0016")
+                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0017")
                 self.assertFalse(load_policy(connection).paused)
+                self.assertIn("synthetic-source", load_policy(connection).allowed_sources)
                 self.assertEqual(connection.execute("SELECT count(*) FROM security_audit").fetchone()[0], 0)
             backup, = path.parent.glob("context.db.*.dpapi")
             restored = path.parent / "restored.db"

@@ -73,6 +73,7 @@ class RestoreSecurityTests(unittest.TestCase):
 
     def test_unknown_or_inconsistent_schema_never_creates_destination(self):
         for corruption in ("UPDATE alembic_version SET version_num='9999'", "DROP TABLE devices",
+                           "ALTER TABLE owner_sessions DROP COLUMN last_seen",
                            "DROP TABLE alembic_version", "UPDATE alembic_version SET version_num='0002'"):
             with self.subTest(corruption=corruption), tempfile.TemporaryDirectory() as directory:
                 path = Path(directory) / "context.db"

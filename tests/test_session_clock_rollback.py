@@ -1,6 +1,8 @@
 """An observed expired or future session must not revive on wall-clock changes."""
 
+import sqlite3
 import unittest
+from contextlib import closing
 from functools import partial
 
 import test_owner_sessions as fixture
@@ -39,4 +41,21 @@ class SessionClockRollbackTests(unittest.IsolatedAsyncioTestCase):
             return authorize_mutation(connection, session.token, session.csrf, 2900)
 
         self.assertFalse(await self.writer.submit(mutation))
+        self.assertFalse(await self.writer.submit(partial(session_active, token=session.token, now=1101)))
+
+    async def test_observed_backward_time_inside_lifetime_revokes_across_restart(self):
+        session = await self.writer.submit(partial(create_session, expected_hash=self.digest, now=1100))
+        self.assertTrue(await self.writer.submit(partial(session_active, token=session.token, now=1200)))
+        await self.writer.close()
+        self.writer = Writer(self.path)
+        await self.writer.start()
+        self.assertFalse(await self.writer.submit(partial(session_active, token=session.token, now=1199)))
+        self.assertFalse(await self.writer.submit(partial(session_active, token=session.token, now=1201)))
+
+    async def test_corrupt_watermark_fails_closed(self):
+        session = await self.writer.submit(partial(create_session, expected_hash=self.digest, now=1100))
+        with closing(sqlite3.connect(self.path)) as connection:
+            connection.execute("PRAGMA ignore_check_constraints=ON")
+            connection.execute("UPDATE owner_sessions SET last_seen=-1")
+            connection.commit()
         self.assertFalse(await self.writer.submit(partial(session_active, token=session.token, now=1101)))

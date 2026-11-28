@@ -5,7 +5,7 @@ import time
 
 from personalcontext.audit.record import record_audit
 
-_REVISIONS = {f"{number:04d}": number for number in range(1, 17)}
+_REVISIONS = {f"{number:04d}": number for number in range(1, 18)}
 _TABLES = {"owner_credentials": 3, "bootstrap_codes": 4, "owner_sessions": 5,
            "auth_rate_clocks": 6, "auth_attempts": 6, "pairing_codes": 7, "devices": 7,
            "capture_policy": 8, "capture_policy_sources": 8, "capture_policy_grants": 8, "security_audit": 9,
@@ -26,6 +26,10 @@ def reset_restored_access(connection: sqlite3.Connection) -> None:
     revision = _REVISIONS[rows[0][0]]
     if any((table in tables) != (revision >= since) for table, since in _TABLES.items()):
         raise sqlite3.DatabaseError("Inconsistent backup security schema")
+    if revision >= 5:
+        columns = {row[1] for row in connection.execute("PRAGMA table_info(owner_sessions)")}
+        if ("last_seen" in columns) != (revision >= 17):
+            raise sqlite3.DatabaseError("Inconsistent backup security schema")
     if revision >= 4:
         connection.execute("DELETE FROM bootstrap_codes")
     if revision >= 5:

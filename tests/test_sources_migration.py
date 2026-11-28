@@ -46,7 +46,7 @@ class SourcesMigrationTests(unittest.TestCase):
                 connection.commit()
             initialize_database(path)
             with closing(sqlite3.connect(path)) as connection:
-                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0016")
+                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0017")
                 self.assertEqual(connection.execute("SELECT count(*) FROM security_audit WHERE event_type='owner_login'").fetchone()[0], 1)
                 self.assertEqual(connection.execute("SELECT count(*) FROM sources").fetchone()[0], 0)
             backup, = path.parent.glob("context.db.*.dpapi")
@@ -78,6 +78,8 @@ class SourcesMigrationTests(unittest.TestCase):
                 set_source_pause(connection, owner.token, owner.csrf, source.source_id, 1, False, now + 6)
                 connection.commit()
                 backup = backup_database(connection, path)
+                connection.execute("DELETE FROM owner_sessions")
+                connection.commit()
             with self.assertRaisesRegex(RuntimeError, "Cannot downgrade"):
                 command.downgrade(config_for(path), "0009")
             restored = path.parent / "restored.db"

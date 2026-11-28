@@ -29,5 +29,5 @@ class ListenerMigrationTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 command.downgrade(config, "0014")
             with closing(sqlite3.connect(path)) as connection:
-                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0016")
+                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0017")
                 self.assertEqual(connection.execute("SELECT count(*) FROM security_audit WHERE event_type='private_listener_attempt'").fetchone()[0], 1)

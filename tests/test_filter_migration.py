@@ -28,7 +28,7 @@ class FilterMigrationTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 command.downgrade(config, "0015")
             with closing(sqlite3.connect(path)) as connection:
-                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0016")
+                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0017")
                 self.assertEqual(connection.execute("SELECT value FROM privacy_filter_rules").fetchone()[0], "example.org")
 
     def test_restoring_rules_does_not_restore_consent(self):
