@@ -28,6 +28,10 @@ The private listener is off on every process start. Its API and limitations are:
    server run on the same host, so this does not prove LAN routing or a real firewall.
    Remote client trust, allowed and disallowed peers, forged Host/Origin,
    plaintext, port conflict, restart and shutdown still need real LAN tests.
+   A Windows-only same-host test also prepares an encrypted synthetic key using
+   real DPAPI and NTFS ACLs, rejects a weakened key ACL on start, restores it and
+   authenticates over a TLS socket with a test-only trust root. An untrusted
+   client fails certificate verification. Firewall assessments are still mocked.
 
 `POST /api/v1/network/private/start` requires owner Origin, CSRF and the saved
 revision in JSON; `POST /api/v1/network/private/stop` requires the same owner
