@@ -22,6 +22,10 @@ from personalcontext.windows.setup_owner import OwnerSetupWindow
 
 
 def main() -> int:
+    if sys.argv[1:] == ["--check-timezones"]:
+        from personalcontext.ingest.visit.timezone_probe import verify_timezone_runtime
+
+        return 0 if verify_timezone_runtime() else 1
     if len(sys.argv) > 1 and sys.argv[1] == "--restore":
         from personalcontext.storage.restore import main as restore_main
 

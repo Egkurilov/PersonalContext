@@ -18,11 +18,17 @@ def main():
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 17890))
     executable = Path(sys.argv[1] if len(sys.argv) > 1 else "dist/PersonalContext/PersonalContext.exe").resolve()
+    with tempfile.TemporaryDirectory() as timezone_dir:
+        timezone_env = os.environ.copy()
+        timezone_env["LOCALAPPDATA"] = timezone_dir
+        timezone_env["PYTHONTZPATH"] = ""
+        subprocess.run([str(executable), "--check-timezones"], check=True, timeout=15, capture_output=True, env=timezone_env)
+        assert not (Path(timezone_dir) / "PersonalContext").exists()
     verify_frozen_python(executable)
     migrations = executable.parent / "_internal/personalcontext/migrations"
     verify_migrations(Path("src/personalcontext/migrations"), migrations)
     verify_system_runtime(executable.parent / "_internal")
-    for name in ("health.v1.schema.json", "readiness.v1.schema.json", "event-id.v1.schema.json", "event-kind.v1.schema.json", "event-quality.v1.schema.json", "event-timing.v1.schema.json", "event-temporal.v1.schema.json"):
+    for name in ("health.v1.schema.json", "readiness.v1.schema.json", "event-id.v1.schema.json", "event-kind.v1.schema.json", "event-quality.v1.schema.json", "event-timing.v1.schema.json", "event-temporal.v1.schema.json", "web-visit.v1.schema.json", "web-active.v1.schema.json"):
         assert (executable.parent / "_internal" / "schemas" / name).read_bytes() == (Path("schemas") / name).read_bytes().replace(b"\r\n", b"\n")
     measure_fresh_start(executable)
     verify_migrations(Path("src/personalcontext/migrations"), migrations)

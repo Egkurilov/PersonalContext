@@ -39,4 +39,4 @@ class SessionClockMigrationTests(unittest.TestCase):
                 command.downgrade(config, "0016")
             with closing(sqlite3.connect(path)) as connection:
                 self.assertEqual(connection.execute("SELECT last_seen FROM owner_sessions").fetchone()[0], 1001)
-                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0017")
+                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0018")
