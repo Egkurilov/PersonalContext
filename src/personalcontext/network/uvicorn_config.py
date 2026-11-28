@@ -8,6 +8,7 @@ import uvicorn
 from starlette.types import ASGIApp
 
 from personalcontext.network.boundary import PrivateBoundary
+from personalcontext.network.material.paths import validated_tls_material
 from personalcontext.network.tls import vault_server_context
 from personalcontext.network.transport import ScopedTransport
 
@@ -17,7 +18,10 @@ def private_server_config(app: ASGIApp, boundary: PrivateBoundary, cert: Path, k
     """Verify TLS; caller must validate the firewall and use the app's event loop."""
     if not isinstance(boundary, PrivateBoundary):
         raise TypeError("Invalid private TLS configuration")
-    context = vault_server_context(cert, key, boundary.hostname, protected)
+    if cert.parent != key.parent:
+        raise ValueError("Invalid private TLS configuration")
+    with validated_tls_material(cert.parent, cert.name, key.name) as (checked_cert, checked_key):
+        context = vault_server_context(checked_cert, checked_key, boundary.hostname, protected)
     if (not isinstance(context, ssl.SSLContext) or context.protocol != ssl.PROTOCOL_TLS_SERVER
             or context.minimum_version < ssl.TLSVersion.TLSv1_2):
         raise ValueError("Invalid private TLS configuration")

@@ -24,8 +24,12 @@ listener, peer network, firewall or browser installation.
 An internal Uvicorn configuration builds a verified TLS 1.2+ server context
 from the certificate, encrypted key and DPAPI-protected passphrase, joins it to
 the scoped transport, disables proxy headers and request access logs, and
-leaves the shared application's lifecycle to its existing event loop. It does
-not bind or start a socket. A synthetic test runs it on loopback: a real TLS
+leaves the shared application's lifecycle to its existing event loop. Configuration
+creation revalidates local fixed NTFS storage, file and ancestor ACLs, certificate
+trust and hostname, and encrypted key while holding the checked files against
+write/delete sharing. Windows tests reject altered ACLs and certificates. The
+resulting TLS context is kept in memory; this is a preparation check, not a
+firewall or lifecycle guarantee. It does not bind or start a socket. A synthetic test runs it on loopback: a real TLS
 connection with a synthetic certificate succeeds cryptographically but is denied as an unlisted peer even
 with a forged forwarding header; plaintext HTTP is not accepted. This is not a
 LAN acceptance test. Before any actual start the caller must validate the
@@ -68,7 +72,7 @@ Reparse-point ancestors, null DACLs and unsupported effective ACE types are
 rejected. These conservative checks may reject otherwise safe ACLs; they do not
 defeat administrators or prevent a trusted owner from changing files after
 preflight. Listener activation and a settings UI remain unimplemented;
-recheck handles, ACLs and certificate at actual startup. See Microsoft's
+call the configuration recheck at actual startup. See Microsoft's
 [DACL guidance](https://learn.microsoft.com/en-us/windows/win32/secauthz/dacls-and-aces)
 and [null DACL behavior](https://learn.microsoft.com/en-us/windows/win32/secauthz/null-dacls-and-empty-dacls).
 

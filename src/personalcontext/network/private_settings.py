@@ -39,10 +39,14 @@ def _valid_name(value: object) -> bool:
             and value.split(".", 1)[0].lower() not in _RESERVED)
 
 
+def valid_material_names(cert_name: object, key_name: object) -> bool:
+    return (_valid_name(cert_name) and _valid_name(key_name) and isinstance(cert_name, str)
+            and isinstance(key_name, str) and cert_name.lower() != key_name.lower())
+
+
 def valid_candidate(value: object) -> bool:
     return (isinstance(value, PrivateCandidate) and isinstance(value.boundary, PrivateBoundary)
-            and _valid_name(value.cert_name) and _valid_name(value.key_name)
-            and value.cert_name.lower() != value.key_name.lower() and type(value.protected) is bytes
+            and valid_material_names(value.cert_name, value.key_name) and type(value.protected) is bytes
             and 1 <= len(value.protected) <= 8192)
 
 

@@ -5,6 +5,7 @@ import tempfile
 import threading
 import time
 import unittest
+from contextlib import nullcontext
 from pathlib import Path
 from unittest.mock import patch
 
@@ -38,7 +39,9 @@ class PrivateTlsSocketTests(unittest.TestCase):
             listener.listen(10)
             port = listener.getsockname()[1]
             app = create_app(Path(directory) / "context.db")
-            with patch("personalcontext.network.uvicorn_config.vault_server_context", return_value=context) as verify:
+            with (patch("personalcontext.network.uvicorn_config.validated_tls_material",
+                        return_value=nullcontext((fixture.cert, fixture.key))),
+                  patch("personalcontext.network.uvicorn_config.vault_server_context", return_value=context) as verify):
                 config = private_server_config(app, boundary, fixture.cert, fixture.key, b"synthetic")
             verify.assert_called_once_with(fixture.cert, fixture.key, boundary.hostname, b"synthetic")
             server = uvicorn.Server(config)
@@ -71,6 +74,8 @@ class PrivateTlsSocketTests(unittest.TestCase):
         boundary = PrivateBoundary.create("192.168.7.2", "pc.example.test", 18443, ["192.168.7.0/24"])
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         with (tempfile.TemporaryDirectory() as directory, self.assertRaises(ValueError),
+              patch("personalcontext.network.uvicorn_config.validated_tls_material",
+                    return_value=nullcontext((Path("synthetic-cert"), Path("synthetic-key")))),
               patch("personalcontext.network.uvicorn_config.vault_server_context", return_value=context)):
             private_server_config(create_app(Path(directory) / "context.db"), boundary,
                                   Path("synthetic-cert"), Path("synthetic-key"), b"synthetic")
@@ -82,6 +87,8 @@ class PrivateTlsSocketTests(unittest.TestCase):
         protected = seal_passphrase(b"synthetic-test-passphrase")
         create_default = ssl.create_default_context
         with (tempfile.TemporaryDirectory() as directory,
+              patch("personalcontext.network.uvicorn_config.validated_tls_material",
+                    return_value=nullcontext((fixture.cert, fixture.encrypted))),
               patch("personalcontext.network.tls.ssl.create_default_context",
                     side_effect=lambda: create_default(cafile=str(fixture.cert)))):
             config = private_server_config(create_app(Path(directory) / "context.db"), boundary,
