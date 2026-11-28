@@ -3,5 +3,6 @@
 import subprocess
 
 
-def run_installer(command: list[str], *, check: bool, timeout: float = 120) -> subprocess.CompletedProcess[bytes]:
-    return subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=timeout, check=check)
+def run_installer(command: list[str], *, check: bool, timeout: float = 120,
+                  env: dict[str, str] | None = None) -> subprocess.CompletedProcess[bytes]:
+    return subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=timeout, check=check, env=env)
