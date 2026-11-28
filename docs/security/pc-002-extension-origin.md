@@ -19,7 +19,11 @@ authoritative operation. Native device credentials retain their existing
 behavior; a browser-bound token cannot be used without its bound origin.
 
 Owner revocation takes effect immediately. Expired and consumed pairing codes
-cannot allow enrollment or extend a temporary preflight grant. Restoring a
+cannot allow enrollment or extend a temporary preflight grant. An extension
+request first removes all pairing codes observed outside their valid interval,
+including before issuance, in the writer transaction; after commit a clock
+rewind cannot revive them. Existing paired devices are not removed. A clock
+change and correction that occurs between checks remains undetectable. Restoring a
 backup removes pending grants and revokes devices. Migration `0013` stores
 origin bindings; downgrade refuses to discard them, so rollback requires a
 verified earlier backup. Existing native device credentials remain usable.

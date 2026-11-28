@@ -40,8 +40,13 @@ def device_origin_matches(connection: sqlite3.Connection, device_id: object, ori
 
 
 def origin_approved(connection: sqlite3.Connection, origin: str, now: int) -> bool:
-    if not valid_origin(origin):
+    if not valid_origin(origin) or type(now) is not int or not 0 <= now <= 2**53 - 300:
         return False
+    connection.execute(
+        "DELETE FROM pairing_codes WHERE typeof(issued_at)!='integer' OR typeof(expires_at)!='integer' "
+        "OR issued_at<0 OR issued_at>? OR expires_at!=issued_at+300 OR issued_at>? OR expires_at<=?",
+        (2**53 - 300, now, now),
+    )
     pending = connection.execute(
         "SELECT 1 FROM extension_pairings e JOIN pairing_codes p ON p.code_hash=e.code_hash "
         "WHERE e.origin=? AND p.issued_at<=? AND p.expires_at>? LIMIT 1", (origin, now, now),
