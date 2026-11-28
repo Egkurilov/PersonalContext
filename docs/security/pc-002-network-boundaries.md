@@ -105,6 +105,12 @@ Its [lifecycle notes](pc-002-listener-lifecycle.md) describe its owner controls,
 monitoring gaps, WFP permission limit and remaining LAN/VPN acceptance tests.
 Never treat the request filter as a substitute for TLS, firewall or authentication.
 
+The Windows frozen smoke `scripts/smoke_frozen_network.py` inspects the
+application process tree twice during startup with synthetic local data. It
+requires exactly one TCP listener on loopback port 17890 and no UDP endpoints;
+an independent test checks that an additional loopback listener is rejected.
+These snapshots do not prove later network behavior or firewall enforcement.
+
 `test_private_owner_socket.py` exercises owner login, Secure/HttpOnly/Strict
 cookie attributes, Origin, CSRF, logout and denied bootstrap through a real TLS
 socket bound to an eligible private address on the same machine. It uses a
