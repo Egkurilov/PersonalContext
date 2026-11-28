@@ -23,6 +23,11 @@ cannot allow enrollment or extend a temporary preflight grant. Restoring a
 backup removes pending grants and revokes devices. Migration `0013` stores
 origin bindings; downgrade refuses to discard them, so rollback requires a
 verified earlier backup. Existing native device credentials remain usable.
-Synthetic HTTP tests exercise the contract, but a real Chrome/Edge extension,
-browser CORS behavior and private HTTPS transport have not been validated.
-The extension implementation and capture remain separate future work.
+Synthetic HTTP tests exercise the contract. On Windows, the manual command
+`python scripts/smoke_browser_extension.py` also ran a temporary synthetic MV3
+extension in the installed Edge against the packaged app: pairing and heartbeat
+succeeded, an invalid bearer was denied, and the owner route was inaccessible.
+This requires the packaged app, installed Edge and Git's OpenSSL at the paths
+specified by the script, and a free loopback port. It does not validate a
+production extension, Chrome, private HTTPS or remote browser behavior. The
+extension implementation and capture remain separate future work.
