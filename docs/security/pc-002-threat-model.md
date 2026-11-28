@@ -29,3 +29,8 @@ Device and owner checks do not substitute for those requirements. The model
 server and database must not expose network listeners. Physical compromise,
 malware with the owner's privileges, backups already exported, and filesystem
 forensics are not solved by these controls.
+
+The frozen loopback diagnostic smoke sends synthetic canaries in a query and a
+malformed login body, and checks captured stdout/stderr. An invalid HTTP request
+must produce a warning as a positive control for the capture. This covers only
+those tested paths and process streams, not all logs or external components.
