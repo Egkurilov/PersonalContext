@@ -12,11 +12,12 @@ from personalcontext.sources.registry import owns_source
 
 
 def device_policy_allows(connection: sqlite3.Connection, *, token: object, device_id: object,
-                         request: CaptureRequest, latch: CaptureLatch, clock: Callable[[], datetime] | None = None) -> bool:
-    """Check consent and identity only; callers must independently verify source capability."""
+                         request: CaptureRequest, latch: CaptureLatch, origin: object = None,
+                         clock: Callable[[], datetime] | None = None) -> bool:
+    """Origin must come from the verified server transport, never from a payload."""
     if not connection.in_transaction or not isinstance(request, CaptureRequest):
         return False
-    if not owns_source(connection, token, device_id, request.source):
+    if not owns_source(connection, token, device_id, request.source, origin):
         return False
     row = connection.execute(
         "SELECT kind,paused,revision,created_at,updated_at FROM sources WHERE source_id=? AND device_id=?",

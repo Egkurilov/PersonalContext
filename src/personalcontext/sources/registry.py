@@ -40,9 +40,10 @@ def create_source(connection: sqlite3.Connection, token: object, csrf: object,
     return SourceResult("ok", source_id, 1)
 
 
-def owns_source(connection: sqlite3.Connection, token: object, device_id: object, source_id: object) -> bool:
+def owns_source(connection: sqlite3.Connection, token: object, device_id: object, source_id: object,
+                origin: object = None) -> bool:
     """Check identity only; this does not authorize capture or verify permissions."""
-    if not valid_device_id(source_id) or not authorize_device(connection, token, device_id, INGEST):
+    if not valid_device_id(source_id) or not authorize_device(connection, token, device_id, INGEST, origin):
         return False
     return connection.execute("SELECT 1 FROM sources WHERE source_id=? AND device_id=?", (source_id, device_id)).fetchone() is not None
 
