@@ -15,13 +15,13 @@ from urllib.error import HTTPError, URLError
 from urllib.request import HTTPCookieProcessor, Request, build_opener
 
 from smoke_local_credentials import check_local_credentials
+from smoke_privacy_filters import check_filters
 
 from personalcontext.auth.bootstrap_store import issue_bootstrap
 from personalcontext.storage.initialize import initialize_database
 
 ORIGIN = "http://127.0.0.1:17890"
 CANDIDATE = "synthetic frozen password"
-
 
 def main():
     with socket.socket() as probe:
@@ -68,18 +68,19 @@ def main():
             with post("/api/v1/auth/rotate", {}, csrf) as response:
                 csrf = json.load(response)["csrf"]
             check_local_credentials(opener, ORIGIN, csrf)
+            check_filters(opener, ORIGIN, csrf)
             preview = {"kind": "web", "source": "example.org",
                        "data": {"url": "https://example.org/article?tracking=synthetic"}}
             with post("/api/v1/privacy/preview", preview, csrf) as response:
                 result = json.load(response)
                 assert result["preview_only"] is True and result["result"]["url"] == "https://example.org/article"
-            draft = {"version": 1, "paused": False, "ttl": 600, "allowed": ["synthetic-source"],
+            draft = {"version": 2, "paused": False, "ttl": 600, "allowed": ["synthetic-source"],
                      "denied": [], "grants": [{"source": "synthetic-source", "scope": "metadata"}]}
             request = Request(ORIGIN + "/api/v1/privacy/policy", data=json.dumps(draft).encode(), method="PATCH",
                               headers={"Origin": ORIGIN, "Content-Type": "application/json", "X-CSRF-Token": csrf})
             with opener.open(request, timeout=5) as response:
                 result = json.load(response)
-                assert result["version"] == 2 and result["local_paused"] is False
+                assert result["version"] == 3 and result["local_paused"] is False
             with post("/api/v1/privacy/pause", {}, csrf) as response:
                 assert response.status == 204
             with opener.open(ORIGIN + "/api/v1/privacy/policy", timeout=5) as response:
@@ -114,7 +115,6 @@ def main():
         finally:
             process.terminate()
             process.wait(timeout=10)
-
 
 if __name__ == "__main__":
     main()

@@ -46,7 +46,7 @@ class SourcesMigrationTests(unittest.TestCase):
                 connection.commit()
             initialize_database(path)
             with closing(sqlite3.connect(path)) as connection:
-                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0015")
+                self.assertEqual(connection.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0016")
                 self.assertEqual(connection.execute("SELECT count(*) FROM security_audit WHERE event_type='owner_login'").fetchone()[0], 1)
                 self.assertEqual(connection.execute("SELECT count(*) FROM sources").fetchone()[0], 0)
             backup, = path.parent.glob("context.db.*.dpapi")

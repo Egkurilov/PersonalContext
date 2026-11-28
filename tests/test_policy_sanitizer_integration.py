@@ -9,6 +9,8 @@ from personalcontext.auth.owner_sessions import create_session
 from personalcontext.auth.password_hash import hash_password
 from personalcontext.jobs.writer import Writer
 from personalcontext.privacy.capture_policy import CaptureRequest
+from personalcontext.privacy.filters.rules import FilterRules
+from personalcontext.privacy.filters.store import save_filters
 from personalcontext.privacy.policy_pause import pause_local
 from personalcontext.privacy.policy_store import PolicyDraft, load_policy, save_policy
 from personalcontext.privacy.runtime.latch import CaptureLatch
@@ -29,12 +31,15 @@ class PolicySanitizerIntegrationTests(unittest.IsolatedAsyncioTestCase):
                 bootstrap = await writer.submit(partial(issue_bootstrap, now=1000))
                 await writer.submit(partial(consume_bootstrap, candidate=bootstrap, encoded=encoded, now=1001))
                 owner = await writer.submit(partial(create_session, expected_hash=encoded, now=1002))
+                filters = FilterRules(allowed_domains=frozenset({"example.org"}))
+                await writer.submit(partial(save_filters, token=owner.token, csrf=owner.csrf,
+                                            expected=1, rules=filters, now=1003))
                 draft = PolicyDraft(False, 600, frozenset({"synthetic-source"}), frozenset(),
                                     frozenset({("synthetic-source", "metadata")}))
                 result = await writer.submit(partial(save_policy, token=owner.token, csrf=owner.csrf,
-                                                      expected_version=1, draft=draft, now=1010))
+                                                      expected_version=2, draft=draft, now=1010))
                 self.assertEqual(result.status, "ok")
-                request = CaptureRequest("synthetic-source", "metadata", 2, False, "ordinary")
+                request = CaptureRequest("synthetic-source", "metadata", 3, False, "ordinary")
                 context = SanitizerContext(allowed_domains=frozenset({"example.org"}),
                                            private=False, sensitivity="ordinary")
                 latch = CaptureLatch()
