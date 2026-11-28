@@ -15,6 +15,7 @@ import winerror
 from PIL import Image, ImageDraw
 
 from personalcontext.app import create_app
+from personalcontext.network.loopback.config import loopback_server_config
 from personalcontext.windows.lifecycle import mutex_name, request_shutdown
 from personalcontext.windows.pause_capture import PauseCapture
 from personalcontext.windows.setup_owner import OwnerSetupWindow
@@ -50,8 +51,7 @@ def main() -> int:
         root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[2]))
         web_root = root / "frontend" / "dist"
         app = create_app(data_dir / "context.db", web_root, demo=demo)
-        server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=17890, workers=1,
-                                               log_level="warning", proxy_headers=False, ws="none"))
+        server = uvicorn.Server(loopback_server_config(app))
         thread = threading.Thread(target=server.run, kwargs={"sockets": [listener]}, daemon=True)
         thread.start()
         deadline = time.monotonic() + 10
