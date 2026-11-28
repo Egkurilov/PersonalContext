@@ -15,9 +15,11 @@ def verify_downgrade_guard(command: list[str], uninstall_key: str, install_dir: 
         version, value_type = winreg.QueryValueEx(key, "DisplayVersion")
     try:
         set_version("0.0.1", winreg.REG_SZ)
+        print("Installer smoke: accept older version", flush=True)
         run_installer(command, check=True)
         for synthetic_version in ("99.0.0", "invalid"):
             set_version(synthetic_version, winreg.REG_SZ)
+            print(f"Installer smoke: reject version {synthetic_version}", flush=True)
             result = run_installer(command, check=False)
             if result.returncode == 0 or executable.read_bytes() != original:
                 raise RuntimeError("Installer did not reject unsafe version replacement")
