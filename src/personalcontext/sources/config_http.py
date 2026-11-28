@@ -10,6 +10,7 @@ from personalcontext.auth.http_routes import error
 from personalcontext.devices.scopes import CONFIG, authorize_device
 from personalcontext.privacy.capture_policy import CapturePolicy
 from personalcontext.privacy.policy_store import load_policy
+from personalcontext.privacy.runtime.clock import policy_time_valid
 from personalcontext.sources.read import Source, read_sources
 
 router = APIRouter(prefix="/api/v1/device")
@@ -37,8 +38,8 @@ async def config(request: Request) -> Response:
         return error(401, "unauthorized")
     if policy is None or rows is None or len(rows) > 16 or policy.issued_at is None or policy.expires_at is None:
         return error(503, "unavailable")
-    issued, expires = int(policy.issued_at.timestamp()), int(policy.expires_at.timestamp())
-    paused = policy.paused or not issued <= now < expires or ticket is None or not latch.allows(ticket)
+    expires = int(policy.expires_at.timestamp())
+    paused = policy.paused or not policy_time_valid(latch, policy, now) or ticket is None or not latch.allows(ticket)
     values = [{"source_id": row.source_id, "kind": row.kind, "revision": row.revision,
                "owner_paused": row.paused, "paused": True, "capability": "unverified", "scopes": []}
               for row in rows]

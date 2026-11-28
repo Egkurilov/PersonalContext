@@ -48,6 +48,9 @@ class PolicySanitizerIntegrationTests(unittest.IsolatedAsyncioTestCase):
                 result = await writer.submit(partial(prepare_web, request=request, context=context, value=sample,
                                                      latch=latch, clock=lambda: next(times)))
                 self.assertIsNone(result)
+                self.assertTrue(latch.is_paused())
+                latch = CaptureLatch()
+                latch.resume_if_unchanged(latch.generation())
                 calls = [0]
 
                 def pausing_clock():

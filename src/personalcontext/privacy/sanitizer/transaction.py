@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 
 from personalcontext.privacy.capture_policy import CaptureRequest, allows_capture
 from personalcontext.privacy.policy_store import load_policy
+from personalcontext.privacy.runtime.clock import policy_time_valid
 from personalcontext.privacy.runtime.latch import CaptureLatch
 from personalcontext.privacy.sanitizer.app import SanitizedApp
 from personalcontext.privacy.sanitizer.gate import gate_app, gate_text, gate_web
@@ -22,8 +23,11 @@ def prepare_web(connection: sqlite3.Connection, request: CaptureRequest, context
         connection.execute("BEGIN IMMEDIATE")
     policy = load_policy(connection)
     get_time = clock or (lambda: datetime.now(UTC))
-    result = gate_web(policy, request, context, value, get_time()) if policy is not None else None
-    return result if (policy is not None and result is not None and allows_capture(policy, request, get_time())
+    first = get_time()
+    result = gate_web(policy, request, context, value, first) if policy is not None and policy_time_valid(latch, policy, first) else None
+    last = get_time() if result is not None else first
+    return result if (policy is not None and result is not None and policy_time_valid(latch, policy, last)
+                      and allows_capture(policy, request, last)
                       and latch.allows(ticket)) else None
 
 
@@ -36,8 +40,11 @@ def prepare_app(connection: sqlite3.Connection, request: CaptureRequest, context
         connection.execute("BEGIN IMMEDIATE")
     policy = load_policy(connection)
     get_time = clock or (lambda: datetime.now(UTC))
-    result = gate_app(policy, request, context, value, get_time()) if policy is not None else None
-    return result if (policy is not None and result is not None and allows_capture(policy, request, get_time())
+    first = get_time()
+    result = gate_app(policy, request, context, value, first) if policy is not None and policy_time_valid(latch, policy, first) else None
+    last = get_time() if result is not None else first
+    return result if (policy is not None and result is not None and policy_time_valid(latch, policy, last)
+                      and allows_capture(policy, request, last)
                       and latch.allows(ticket)) else None
 
 
@@ -50,6 +57,9 @@ def prepare_text(connection: sqlite3.Connection, request: CaptureRequest, contex
         connection.execute("BEGIN IMMEDIATE")
     policy = load_policy(connection)
     get_time = clock or (lambda: datetime.now(UTC))
-    result = gate_text(policy, request, context, domain, value, get_time()) if policy is not None else None
-    return result if (policy is not None and result is not None and allows_capture(policy, request, get_time())
+    first = get_time()
+    result = gate_text(policy, request, context, domain, value, first) if policy is not None and policy_time_valid(latch, policy, first) else None
+    last = get_time() if result is not None else first
+    return result if (policy is not None and result is not None and policy_time_valid(latch, policy, last)
+                      and allows_capture(policy, request, last)
                       and latch.allows(ticket)) else None

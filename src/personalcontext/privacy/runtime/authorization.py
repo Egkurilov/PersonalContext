@@ -6,11 +6,13 @@ from datetime import UTC, datetime
 
 from personalcontext.privacy.capture_policy import CaptureRequest, allows_capture
 from personalcontext.privacy.policy_store import load_policy
+from personalcontext.privacy.runtime.clock import policy_time_valid
+from personalcontext.privacy.runtime.latch import CaptureLatch
 from personalcontext.sources.registry import owns_source
 
 
 def device_policy_allows(connection: sqlite3.Connection, *, token: object, device_id: object,
-                         request: CaptureRequest, clock: Callable[[], datetime] | None = None) -> bool:
+                         request: CaptureRequest, latch: CaptureLatch, clock: Callable[[], datetime] | None = None) -> bool:
     """Check consent and identity only; callers must independently verify source capability."""
     if not connection.in_transaction or not isinstance(request, CaptureRequest):
         return False
@@ -29,7 +31,7 @@ def device_policy_allows(connection: sqlite3.Connection, *, token: object, devic
         return False
     policy = load_policy(connection)
     now = clock() if clock is not None else datetime.now(UTC)
-    if policy is None or not allows_capture(policy, request, now):
+    if policy is None or not policy_time_valid(latch, policy, now) or not allows_capture(policy, request, now):
         return False
     try:
         return now.timestamp() >= updated

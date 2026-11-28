@@ -51,7 +51,7 @@ class DeviceCaptureGuardTests(unittest.IsolatedAsyncioTestCase):
             connection.execute("INSERT INTO app_metadata(key,value) VALUES ('capture-fixture','synthetic')")
             return True
 
-        validate = partial(device_policy_allows, token=token, device_id=device_id, request=request,
+        validate = partial(device_policy_allows, token=token, device_id=device_id, request=request, latch=self.latch,
                            clock=lambda: datetime.fromtimestamp(next(instants), UTC))
         return await submit_capture(self.writer, self.latch, operation, validate)
 
@@ -75,17 +75,25 @@ class DeviceCaptureGuardTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(await self.attempt(a.token, a.device_id, 2, 1015, sensitivity="unknown"))
         self.assertIsNone(await self.attempt(a.token, a.device_id, 2, 1612))
         self.assertEqual(await self.count(), 0)
+        self.assertTrue(self.latch.is_paused())
+        self.assertTrue(self.latch.drain())
         deny = PolicyDraft(False, 600, grant.allowed, grant.allowed, grant.grants)
         await self.writer.submit(partial(save_policy, token=self.owner.token, csrf=self.owner.csrf,
-                                         expected_version=2, draft=deny, now=1016))
-        self.assertIsNone(await self.attempt(a.token, a.device_id, 3, 1017))
+                                         expected_version=2, draft=deny, now=1613))
+        self.assertTrue(self.latch.resume_if_unchanged(self.latch.generation()))
+        self.assertIsNone(await self.attempt(a.token, a.device_id, 3, 1614))
         await self.writer.submit(partial(save_policy, token=self.owner.token, csrf=self.owner.csrf,
-                                         expected_version=3, draft=grant, now=1018))
-        self.assertIsNone(await self.attempt(a.token, a.device_id, 4, 1019, final_timestamp=1618))
+                                         expected_version=3, draft=grant, now=1615))
+        self.assertIsNone(await self.attempt(a.token, a.device_id, 4, 1616, final_timestamp=2215))
         self.assertEqual(await self.count(), 0)
-        self.assertTrue(await self.attempt(a.token, a.device_id, 4, 1019))
+        self.assertTrue(self.latch.is_paused())
+        self.assertTrue(self.latch.drain())
+        await self.writer.submit(partial(save_policy, token=self.owner.token, csrf=self.owner.csrf,
+                                         expected_version=4, draft=grant, now=2216))
+        self.assertTrue(self.latch.resume_if_unchanged(self.latch.generation()))
+        self.assertTrue(await self.attempt(a.token, a.device_id, 5, 2217))
         await self.writer.submit(lambda connection: connection.execute("DELETE FROM app_metadata WHERE key='capture-fixture'"))
         await self.writer.submit(partial(revoke_device, token=self.owner.token, csrf=self.owner.csrf,
-                                         device_id=a.device_id, now=1020))
-        self.assertIsNone(await self.attempt(a.token, a.device_id, 4, 1021))
+                                         device_id=a.device_id, now=2218))
+        self.assertIsNone(await self.attempt(a.token, a.device_id, 5, 2219))
         self.assertEqual(await self.count(), 0)
