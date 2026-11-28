@@ -18,6 +18,12 @@ def main():
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 17890))
     executable = Path(sys.argv[1] if len(sys.argv) > 1 else "dist/PersonalContext/PersonalContext.exe").resolve()
+    with tempfile.TemporaryDirectory() as timezone_dir:
+        timezone_env = os.environ.copy()
+        timezone_env["LOCALAPPDATA"] = timezone_dir
+        timezone_env["PYTHONTZPATH"] = ""
+        subprocess.run([str(executable), "--check-timezones"], check=True, timeout=15, capture_output=True, env=timezone_env)
+        assert not (Path(timezone_dir) / "PersonalContext").exists()
     verify_frozen_python(executable)
     migrations = executable.parent / "_internal/personalcontext/migrations"
     verify_migrations(Path("src/personalcontext/migrations"), migrations)
