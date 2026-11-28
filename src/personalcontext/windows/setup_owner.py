@@ -45,6 +45,9 @@ class OwnerSetupWindow:
                                            show="*", parent=root)
             if first is None:
                 return
+            if len(first) < 12:
+                messagebox.showerror(title, "Пароль должен содержать не менее 12 символов.", parent=root)
+                return
             second = simpledialog.askstring(title, "Повторите пароль:", show="*", parent=root)
             if second is None:
                 return

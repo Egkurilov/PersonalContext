@@ -49,3 +49,14 @@ class OwnerSetupWindowTests(unittest.IsolatedAsyncioTestCase):
                  patch("tkinter.messagebox.showerror"):
                 await asyncio.to_thread(self.window._dialog)
             self.assertIsNone(await self.writer.submit(find_owner_hash))
+
+    async def test_short_password_explains_requirement_before_bootstrap(self):
+        with (patch("tkinter.Tk"), patch("tkinter.simpledialog.askstring", return_value="short") as ask,
+              patch("tkinter.messagebox.showerror") as error,
+              patch("personalcontext.windows.setup_owner.setup_local_owner") as setup):
+            await asyncio.to_thread(self.window._dialog)
+        self.assertEqual(ask.call_count, 1)
+        self.assertIn("не менее 12 символов", error.call_args.args[1])
+        self.assertNotIn("short", repr(error.call_args))
+        setup.assert_not_called()
+        self.assertIsNone(await self.writer.submit(find_owner_hash))
