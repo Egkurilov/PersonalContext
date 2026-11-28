@@ -100,3 +100,5 @@ Before enabling it, implement and verify certificate and key storage, client
 trust, selected local interface binding, firewall restrictions, HTTPS
 session cookies, owner opt-in, lifecycle and real LAN/VPN negative tests. Never
 use this request filter as a substitute for TLS, firewall or authentication.
+The [listener lifecycle notes](pc-002-listener-lifecycle.md) include a read-only
+WFP subscription probe and its observed non-elevated permission limit.
