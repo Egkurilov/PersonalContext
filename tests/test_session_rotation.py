@@ -47,6 +47,7 @@ class SessionRotationTests(unittest.TestCase):
                 self.assertIsNone(rotate_session(connection, old.token, old.csrf, 1008))
                 connection.rollback()
                 self.assertFalse(session_active(connection, current.token, 2802))
+                connection.commit()
                 self.assertIsNone(rotate_session(connection, current.token, current.csrf, 2802))
                 connection.rollback()
             for secret in (old.token, old.csrf, current.token, current.csrf, rolled.token, rolled.csrf):

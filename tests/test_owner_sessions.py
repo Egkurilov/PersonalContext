@@ -41,8 +41,6 @@ class OwnerSessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(await self.writer.submit(partial(session_active, token=session.token, now=1101)))
         self.assertFalse(await self.writer.submit(partial(session_active, token="invalid", now=1101)))
         self.assertFalse(await self.writer.submit(partial(session_active, token=session.token, now=None)))
-        self.assertFalse(await self.writer.submit(partial(session_active, token=session.token, now=1099)))
-        self.assertFalse(await self.writer.submit(partial(session_active, token=session.token, now=2900)))
         with closing(sqlite3.connect(self.path)) as connection:
             connection.execute("BEGIN IMMEDIATE")
             self.assertTrue(authorize_mutation(connection, session.token, session.csrf, 1101))

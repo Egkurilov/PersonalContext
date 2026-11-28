@@ -62,6 +62,9 @@ def _session(connection: sqlite3.Connection, token: object, now: int) -> bytes |
     if row is None:
         return None
     csrf_hash, credential_hash, issued, expires = row
+    if type(issued) is int and type(expires) is int and not issued <= now < expires:
+        connection.execute("DELETE FROM owner_sessions WHERE token_hash=?", (digest,))
+        return None
     current = find_owner_hash(connection)
     if (not isinstance(csrf_hash, bytes) or len(csrf_hash) != 32
             or not isinstance(credential_hash, bytes) or len(credential_hash) != 32
