@@ -40,7 +40,8 @@ def _safe_path(path: str) -> str | None:
         if any(part in (".", "..") for part in decoded.split("/")):
             return None
         clean = sanitize_text(decoded, 8192)
-        if clean is None or _SENSITIVE.search(clean):
+        if (clean is None or _PERCENT.search(clean) or _SENSITIVE.search(clean) or "\\" in clean or "//" in clean
+                or any(part in (".", "..") for part in clean.split("/"))):
             return None
         return quote(clean, safe="/-._~")
     except (UnicodeError, ValueError):
