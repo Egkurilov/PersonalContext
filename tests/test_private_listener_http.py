@@ -108,3 +108,4 @@ class PrivateListenerHttpTests(unittest.TestCase):
                 time.sleep(0.01)
             self.assertTrue(fake_socket.closed)
             self.assertFalse(self.client.get(ROOT + "/config").json()["enabled"])
+            self.assertGreater(self.client.app.state.private_listener.generation, 0)

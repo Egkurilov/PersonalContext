@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 from personalcontext.network.boundary import PrivateBoundary
 from personalcontext.network.firewall.status import firewall_status
 from personalcontext.network.listener.read import audit_stop
-from personalcontext.network.listener.shutdown import stop_locked
 
 if TYPE_CHECKING:
     from personalcontext.network.listener.manager import PrivateListener
@@ -27,7 +26,6 @@ async def monitor_listener(manager: "PrivateListener", boundary: PrivateBoundary
         raise
     except Exception:  # noqa: BLE001,S110 - fail closed without logging network details
         pass
-    async with manager.lock:
-        await stop_locked(manager)
+    await manager.stop()
     with contextlib.suppress(sqlite3.Error, RuntimeError):
         await manager.writer.submit(lambda c: audit_stop(c, "system"))
